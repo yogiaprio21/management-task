@@ -1,0 +1,21 @@
+services:
+  - name: task-management-backend
+    type: web
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: DB_HOST
+        value: your-postgres-host
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_USERNAME
+        value: your-db-username
+      - key: DB_PASSWORD
+        value: your-db-password
+      - key: DB_DATABASE
+        value: management_task_db
+      - key: JWT_SECRET
+        value: your-jwt-secret
+      - key: PORT
+        value: "3000"
