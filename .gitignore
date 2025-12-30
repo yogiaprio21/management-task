@@ -1,0 +1,25 @@
+echo "# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Dependency directories
+node_modules/
+
+# Build directories
+dist/
+build/
+
+# IDE specific files
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# System files
+.DS_Store
+Thumbs.db" > .gitignore
