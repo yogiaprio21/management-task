@@ -8,19 +8,21 @@ async function bootstrap() {
 
   /**
    * CORS Configuration
-   * Sesuaikan dengan domain frontend Vercel
+   * Sesuaikan dengan domain frontend
    */
   app.enableCors({
     origin: [
       'http://localhost:5173', // dev
-      'http://localhost:3000',
-      'https://management-task-iota.vercel.app/login',
+      'http://localhost:3000', // dev alternatif
+      'https://management-task-iota.vercel.app', // production
     ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
   /**
-   * Global Validation
+   * Global Validation Pipe
    */
   app.useGlobalPipes(
     new ValidationPipe({
@@ -31,7 +33,7 @@ async function bootstrap() {
   );
 
   /**
-   * Swagger (Enable only in non-production)
+   * Swagger API Documentation (Non-production only)
    */
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
@@ -50,7 +52,7 @@ async function bootstrap() {
    */
   const port = process.env.PORT || 3000;
   await app.listen(port);
-
   console.log(`🚀 Backend running on port ${port}`);
 }
+
 bootstrap();
