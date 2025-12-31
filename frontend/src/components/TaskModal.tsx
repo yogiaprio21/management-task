@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { getUsers } from '../api/users';
 import { X } from 'lucide-react';
-import type { Task, CreateTaskDto, UpdateTaskDto, User } from '../types';
+import type { Task, CreateTaskDto, UpdateTaskDto } from '../types';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task, 
 
   useEffect(() => {
     if (task) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         title: task.title,
         description: task.description,
@@ -56,18 +57,17 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task, 
   };
 
   // RBAC Logic for Form Fields
-  const isStaff = user?.role === 'user' || (user?.role === 'manager' && task?.creatorId !== user?.id && !isCreating);
   // Admin can edit all. Manager can edit own. Staff can only edit status if assigned (handled by backend, but UI should reflect).
   // Actually, simplified:
   // Admin: All editable.
   // Manager: All editable if creating or if creator.
   // Staff: Only Status editable if editing.
-  
+
   // Refined Logic based on Prompt:
   // Admin: All.
   // Manager: Create (All), Edit (Own -> All).
   // Staff: Edit (Status only).
-  
+
   const canEditDetails = user?.role === 'admin' || isCreating || (user?.role === 'manager' && task?.creatorId === user?.id);
   
   return (
@@ -119,7 +119,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task, 
               </label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as Task['status'] })}
                 className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
                 <option value="todo">To Do</option>
@@ -136,7 +136,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task, 
               <select
                 disabled={!canEditDetails}
                 value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'low' | 'medium' | 'high' })}
                 className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50"
               >
                 <option value="low">Low</option>

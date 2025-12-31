@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasks, createTask, updateTask, deleteTask } from '../api/tasks';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Search, Filter, Trash2, Edit2, Calendar, User as UserIcon } from 'lucide-react';
+import { Plus, Search, Filter, Trash2, Edit2, Calendar } from 'lucide-react';
 import TaskModal from '../components/TaskModal';
 import { toast } from 'react-hot-toast';
-import type { Task } from '../types';
+import type { Task, CreateTaskDto, UpdateTaskDto } from '../types';
+import { AxiosError } from 'axios';
 import clsx from 'clsx';
 import { Skeleton } from '../components/Skeleton';
 
@@ -34,15 +35,15 @@ const TaskList: React.FC = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => updateTask(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateTaskDto }) => updateTask(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Task updated successfully');
       setIsModalOpen(false);
       setEditingTask(undefined);
     },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to update task');
+    onError: (err: AxiosError) => {
+      toast.error((err.response?.data as { message?: string })?.message || 'Failed to update task');
     },
   });
 
@@ -65,13 +66,13 @@ const TaskList: React.FC = () => {
     });
   }, [tasks, search, statusFilter, priorityFilter]);
 
-  const handleCreate = (data: any) => {
-    createMutation.mutate(data);
+  const handleCreate = (data: CreateTaskDto | UpdateTaskDto) => {
+    createMutation.mutate(data as CreateTaskDto);
   };
 
-  const handleUpdate = (data: any) => {
+  const handleUpdate = (data: CreateTaskDto | UpdateTaskDto) => {
     if (editingTask) {
-      updateMutation.mutate({ id: editingTask.id, data });
+      updateMutation.mutate({ id: editingTask.id, data: data as UpdateTaskDto });
     }
   };
 
@@ -92,20 +93,15 @@ const TaskList: React.FC = () => {
   };
 
   // RBAC for Delete Button
-  const canDelete = (task: Task) => {
+  const canDelete = () => {
     if (user?.role === 'admin') return true;
-    // Strict reading: Only Admin can delete. 
+    // Strict reading: Only Admin can delete.
     // If we want to allow Manager to delete own tasks:
     // return user?.role === 'manager' && task.creatorId === user.id;
     return false;
   };
 
-  const canEdit = (task: Task) => {
-    // Everyone can "edit" (open modal), but fields are disabled inside based on role.
-    // However, if they have NO rights (e.g. random user on other's task), maybe hide it?
-    // For now, allow opening modal to see details (Read).
-    return true; 
-  };
+  // canEdit is not used, as everyone can open the modal to view
 
   if (isLoading) {
     return (
@@ -259,7 +255,7 @@ const TaskList: React.FC = () => {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        {canDelete(task) && (
+                        {canDelete() && (
                           <button
                             onClick={() => handleDelete(task.id)}
                             className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
