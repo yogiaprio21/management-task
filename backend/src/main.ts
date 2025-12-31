@@ -14,7 +14,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:5173', // dev
       'http://localhost:3000',
-      'https://management-task.vercel.app', // production frontend
+      'https://management-task-iota.vercel.app/login',
     ],
     credentials: true,
   });
