@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+
+// Modules
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProjectsModule } from './projects/projects.module';
@@ -13,6 +15,7 @@ import { MailModule } from './integrations/mail/mail.module';
 import { WebhooksModule } from './integrations/webhooks/webhooks.module';
 import { AuditModule } from './audit/audit.module';
 
+// Entities
 import { User } from './users/user.entity';
 import { Project } from './projects/project.entity';
 import { Sprint } from './sprints/sprint.entity';
@@ -24,17 +27,30 @@ import { AuditLog } from './audit/audit-log.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT, 10),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_DATABASE,
-      entities: [User, Project, Sprint, BacklogItem, Task, Notification, DailyReport, AuditLog],
-      synchronize: true, // Auto-create tables (dev only)
+      url: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false, 
+      },
+      entities: [
+        User,
+        Project,
+        Sprint,
+        BacklogItem,
+        Task,
+        Notification,
+        DailyReport,
+        AuditLog,
+      ],
+      synchronize: false,
+      logging: false,
     }),
+
     AuthModule,
     UsersModule,
     ProjectsModule,
