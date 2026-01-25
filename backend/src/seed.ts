@@ -8,7 +8,7 @@ import { TasksService } from './tasks/tasks.service';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
-async function bootstrap() {
+export async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
   
   // Get all services
@@ -156,4 +156,7 @@ async function bootstrap() {
   await app.close();
   console.log('🚀 Seeding completed successfully!');
 }
-bootstrap();
+
+if (require.main === module) {
+  bootstrap();
+}

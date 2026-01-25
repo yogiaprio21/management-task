@@ -12,6 +12,13 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
 
+  // Run Seed in Production if Needed (Non-blocking)
+  if (process.env.NODE_ENV === 'production') {
+    const { bootstrap } = await import('./seed');
+    console.log('🌱 Triggering Seed process in background...');
+    bootstrap().catch(err => console.error('❌ Seed failed:', err));
+  }
+
   /**
    * CORS Configuration
    */
