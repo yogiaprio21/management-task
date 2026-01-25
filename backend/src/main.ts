@@ -12,11 +12,16 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
 
-  // Run Seed in Production if Needed (Non-blocking)
+  // Run Seed in Production if Needed (Non-blocking with Delay)
   if (process.env.NODE_ENV === 'production') {
-    const { bootstrap } = await import('./seed');
-    console.log('🌱 Triggering Seed process in background...');
-    bootstrap().catch(err => console.error('❌ Seed failed:', err));
+    const { bootstrap: runSeed } = await import('./seed');
+    console.log('⏳ Waiting for Database Sync (5s)...');
+    
+    // Delay 5 seconds to allow TypeORM to create tables
+    setTimeout(() => {
+      console.log('🌱 Triggering Seed process...');
+      runSeed().catch(err => console.error('❌ Seed failed:', err));
+    }, 5000);
   }
 
   /**
