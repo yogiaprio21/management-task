@@ -30,7 +30,22 @@ export async function runSeed(app: INestApplicationContext) {
       tablesExist = true;
       console.log('✅ Database tables detected.');
     } catch (err) {
-      console.log(`⏳ Database tables not ready yet. Error: ${err.message}. Retrying in 5s... (${retries} attempts left)`);
+      console.log(`⏳ Database tables not ready yet. Error: ${err.message}.`);
+      
+      // Try to force synchronize if tables are missing
+      if (err.message.includes('does not exist')) {
+        console.log('🛠️ Attempting to force create tables (synchronize)...');
+        try {
+          await dataSource.synchronize();
+          console.log('✅ Tables created successfully via synchronize!');
+          tablesExist = true;
+          continue;
+        } catch (syncErr) {
+          console.error('❌ Failed to synchronize tables:', syncErr.message);
+        }
+      }
+
+      console.log(`Retrying in 5s... (${retries} attempts left)`);
       retries--;
       await new Promise(resolve => setTimeout(resolve, 5000));
     }

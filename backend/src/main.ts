@@ -65,6 +65,12 @@ async function bootstrap() {
    * Dynamic Port (Render compatible)
    */
   const port = process.env.PORT || 3000;
+  
+  console.log(`🔧 Environment Config:`);
+  console.log(`   - NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`   - DB_SYNCHRONIZE: ${process.env.DB_SYNCHRONIZE}`);
+  console.log(`   - DB_SSL: ${process.env.DB_SSL}`);
+
   await app.listen(port);
   console.log(`🚀 Backend running on port ${port}`);
 
