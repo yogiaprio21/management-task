@@ -30,12 +30,14 @@ Panduan ini mencakup langkah-langkah deployment untuk:
 5.  Konfigurasi:
     *   **Runtime**: Node
     *   **Build Command**: `npm install && npm run build`
-    *   **Start Command**: `npm run seed:prod && npm run start:prod`
-        *   *Catatan: `npm run seed:prod` akan otomatis mengisi data awal ke Supabase saat deployment.*
+    *   **Start Command**: `npm run start:prod`
+        *   *Catatan: Seed data akan berjalan otomatis di background setelah server menyala.*
 6.  Scroll ke bawah ke bagian **Environment Variables**. Tambahkan variabel berikut:
     *   `NODE_ENV`: `production`
     *   `PORT`: `10000`
     *   `DATABASE_URL`: (Tempel URL Supabase dari Langkah 1)
+    *   `DB_SYNCHRONIZE`: `true` (Wajib: untuk membuat tabel otomatis)
+    *   `DB_SSL`: `true` (Wajib: untuk koneksi aman ke Supabase)
     *   `JWT_SECRET`: (Isi dengan string acak yang panjang dan aman, misal hasil dari `openssl rand -hex 32`)
     *   `FRONTEND_URL`: (Kosongkan dulu, atau isi sementara dengan `http://localhost:5173`. Nanti kita update setelah Frontend di-deploy di Vercel).
 7.  Klik **Create Web Service**.
