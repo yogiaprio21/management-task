@@ -7,10 +7,9 @@ import { BacklogService } from './backlog/backlog.service';
 import { TasksService } from './tasks/tasks.service';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { INestApplicationContext } from '@nestjs/common';
 
-export async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule);
-  
+export async function runSeed(app: INestApplicationContext) {
   // Get all services
   const dataSource = app.get(DataSource);
   const usersService = app.get(UsersService);
@@ -19,7 +18,28 @@ export async function bootstrap() {
   const backlogService = app.get(BacklogService);
   const tasksService = app.get(TasksService);
 
-  console.log('🌱 Starting Seed...');
+  console.log('🌱 Starting Seed Process...');
+
+  // Wait for Database Tables to be Ready
+  let tablesExist = false;
+  let retries = 5;
+  while (retries > 0 && !tablesExist) {
+    try {
+      // Check if critical table exists
+      await dataSource.query('SELECT count(*) FROM "users" LIMIT 1');
+      tablesExist = true;
+      console.log('✅ Database tables detected.');
+    } catch (err) {
+      console.log(`⏳ Database tables not ready yet. Retrying in 5s... (${retries} attempts left)`);
+      retries--;
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+
+  if (!tablesExist) {
+    console.error('❌ Failed to connect to database tables after multiple attempts. Skipping seed.');
+    return;
+  }
 
   // 0. Clean Database (Optional: Only if FORCE_SEED is true)
   if (process.env.FORCE_SEED === 'true') {
@@ -30,8 +50,6 @@ export async function bootstrap() {
     } catch (error) {
       console.log('⚠️  Could not clean database (tables might not exist yet), proceeding...');
     }
-  } else {
-    console.log('ℹ️  Skipping database cleanup (FORCE_SEED not set). Checking for existing data...');
   }
 
   // 1. Create Users
@@ -98,10 +116,12 @@ export async function bootstrap() {
 
     for (const item of items) {
       await backlogService.create({
-        ...item,
-        projectId: project.id,
+        title: item.title,
         description: `Implement ${item.title} functionality`,
-      }, adminUser);
+        priority: item.priority as any,
+        status: item.status as any,
+        projectId: project.id,
+      }, managerUser);
     }
     console.log('✅ Backlog items created');
   }
@@ -147,14 +167,19 @@ export async function bootstrap() {
           sprintId: sprint.id,
           backlogItemId: backlogItems[0].id,
           assigneeId: t.assigneeId,
-        }, adminUser);
+        }, managerUser);
       }
       console.log('✅ Tasks created for Sprint 1');
     }
   }
 
+  console.log('🌱 Seed Completed Successfully');
+}
+
+export async function bootstrap() {
+  const app = await NestFactory.createApplicationContext(AppModule);
+  await runSeed(app);
   await app.close();
-  console.log('🚀 Seeding completed successfully!');
 }
 
 if (require.main === module) {
