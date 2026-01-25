@@ -1,3 +1,0 @@
-- [ ] Move eslint-disable-next-line react-hooks/set-state-in-effect to before useEffect hook
-- [ ] Remove the eslint-disable comment inside the useEffect
-- [ ] Change 'as any' to 'as Task['status']' in status select onChange handler
