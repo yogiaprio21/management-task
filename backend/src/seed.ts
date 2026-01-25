@@ -30,7 +30,7 @@ export async function runSeed(app: INestApplicationContext) {
       tablesExist = true;
       console.log('✅ Database tables detected.');
     } catch (err) {
-      console.log(`⏳ Database tables not ready yet. Retrying in 5s... (${retries} attempts left)`);
+      console.log(`⏳ Database tables not ready yet. Error: ${err.message}. Retrying in 5s... (${retries} attempts left)`);
       retries--;
       await new Promise(resolve => setTimeout(resolve, 5000));
     }

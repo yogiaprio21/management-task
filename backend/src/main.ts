@@ -12,18 +12,6 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
 
-  // Run Seed in Production if Needed (Non-blocking)
-  if (process.env.NODE_ENV === 'production') {
-    try {
-      const { runSeed } = await import('./seed');
-      console.log('🌱 Triggering Seed process in background...');
-      // Pass the existing app instance to reuse connection and ensure sync is complete
-      runSeed(app).catch(err => console.error('❌ Seed failed:', err));
-    } catch (error) {
-      console.error('❌ Failed to load seed script:', error);
-    }
-  }
-
   /**
    * CORS Configuration
    */
@@ -79,6 +67,18 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log(`🚀 Backend running on port ${port}`);
+
+  // Run Seed in Production if Needed (Non-blocking)
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      const { runSeed } = await import('./seed');
+      console.log('🌱 Triggering Seed process in background...');
+      // Pass the existing app instance to reuse connection and ensure sync is complete
+      runSeed(app).catch(err => console.error('❌ Seed failed:', err));
+    } catch (error) {
+      console.error('❌ Failed to load seed script:', error);
+    }
+  }
 }
 
 bootstrap();

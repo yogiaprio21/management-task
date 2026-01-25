@@ -60,8 +60,8 @@ import { AuditLog } from './audit/audit-log.entity';
           DailyReport,
           AuditLog,
         ],
-        synchronize: configService.get<string>('DB_SYNCHRONIZE') === 'true',
-        logging: configService.get<string>('DB_LOGGING') === 'true',
+        synchronize: String(configService.get('DB_SYNCHRONIZE')).toLowerCase() === 'true',
+        logging: String(configService.get('DB_LOGGING')).toLowerCase() === 'true',
       }),
     }),
 
