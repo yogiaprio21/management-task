@@ -21,6 +21,7 @@ async function bootstrap() {
         'http://localhost:5173',
         'http://localhost:3000',
         'https://management-task-iota.vercel.app',
+        'https://management-task1.vercel.app',
         process.env.FRONTEND_URL, // Allow env var override
       ].filter(Boolean);
       
