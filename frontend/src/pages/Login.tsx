@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate} from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { login as loginApi } from '../api/auth';
 import { Lock, Mail } from 'lucide-react';
@@ -9,7 +9,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,14 +77,35 @@ const Login: React.FC = () => {
           </button>
         </form>
         
-        {user?.role === 'admin' && (
-          <div className="mt-6 text-center text-sm text-gray-500">
-            Need to register a new user?{' '}
-            <Link to="/register" className="text-primary hover:underline font-medium">
-              Register User
-            </Link>
+        {/* Demo Credentials Section */}
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <h3 className="text-sm font-medium text-gray-500 mb-3 text-center">Demo Credentials</h3>
+          <div className="grid gap-2 text-xs">
+            <div className="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200">
+              <span className="font-medium text-gray-600">Admin</span>
+              <div className="text-right">
+                <div className="text-gray-800">admin@example.com</div>
+                <div className="text-gray-500">password123</div>
+              </div>
+            </div>
+            <div className="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200">
+              <span className="font-medium text-gray-600">Manager</span>
+              <div className="text-right">
+                <div className="text-gray-800">manager@example.com</div>
+                <div className="text-gray-500">password123</div>
+              </div>
+            </div>
+            <div className="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200">
+              <span className="font-medium text-gray-600">Staff</span>
+              <div className="text-right">
+                <div className="text-gray-800">dev@example.com</div>
+                <div className="text-gray-500">password123</div>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
+
+
       </div>
     </div>
   );

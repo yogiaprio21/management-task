@@ -21,13 +21,17 @@ async function bootstrap() {
 
   console.log('🌱 Starting Seed...');
 
-  // 0. Clean Database
-  console.log('🗑️  Cleaning database...');
-  try {
-    await dataSource.query(`TRUNCATE TABLE "audit_logs", "notifications", "daily_reports", "tasks", "backlog_items", "sprints", "projects", "users" RESTART IDENTITY CASCADE;`);
-    console.log('✅ Database cleaned');
-  } catch (error) {
-    console.log('⚠️  Could not clean database (tables might not exist yet), proceeding...');
+  // 0. Clean Database (Optional: Only if FORCE_SEED is true)
+  if (process.env.FORCE_SEED === 'true') {
+    console.log('🗑️  Cleaning database...');
+    try {
+      await dataSource.query(`TRUNCATE TABLE "audit_logs", "notifications", "daily_reports", "tasks", "backlog_items", "sprints", "projects", "users" RESTART IDENTITY CASCADE;`);
+      console.log('✅ Database cleaned');
+    } catch (error) {
+      console.log('⚠️  Could not clean database (tables might not exist yet), proceeding...');
+    }
+  } else {
+    console.log('ℹ️  Skipping database cleanup (FORCE_SEED not set). Checking for existing data...');
   }
 
   // 1. Create Users

@@ -27,15 +27,15 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('Dashboard Component', () => {
-  it('renders correctly', () => {
+  it('renders correctly', async () => {
     render(<Dashboard />, { wrapper: Wrapper });
-    expect(screen.getByText('Dashboard Overview')).toBeDefined();
+    expect(await screen.findByText('Dashboard Overview')).toBeDefined();
   });
 
-  it('opens create project modal when button is clicked', () => {
+  it('opens create project modal when button is clicked', async () => {
     render(<Dashboard />, { wrapper: Wrapper });
     
-    const createButton = screen.getByText('New Project');
+    const createButton = await screen.findByText('New Project');
     fireEvent.click(createButton);
     
     expect(screen.getByText('Create New Project')).toBeDefined();

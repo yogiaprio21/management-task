@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ProjectDetail from '../pages/ProjectDetail'; // Note: This tests the full page, but we might want to test BoardView specifically if exported
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 // Mock AuthContext
 vi.mock('../context/AuthContext', () => ({
@@ -35,15 +35,17 @@ const queryClient = new QueryClient({
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      {children}
-    </BrowserRouter>
+    <MemoryRouter initialEntries={['/projects/1']}>
+      <Routes>
+        <Route path="/projects/:id" element={children} />
+      </Routes>
+    </MemoryRouter>
   </QueryClientProvider>
 );
 
 describe('ProjectDetail Component', () => {
   it('renders project title', async () => {
-    render(<ProjectDetail />, { wrapper: Wrapper });
+    render(<ProjectDetail />, { wrapper: Wrapper }); // The wrapper now handles the route
     // Since we rely on async data, we might need waitFor or findBy
     // For simplicity in this mockup:
     expect(await screen.findByText('Test Project')).toBeDefined();

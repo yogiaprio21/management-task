@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 // Modules
 import { AuthModule } from './auth/auth.module';
@@ -14,6 +16,7 @@ import { ReportsModule } from './reports/reports.module';
 import { MailModule } from './integrations/mail/mail.module';
 import { WebhooksModule } from './integrations/webhooks/webhooks.module';
 import { AuditModule } from './audit/audit.module';
+import { HealthModule } from './health/health.module';
 
 // Entities
 import { User } from './users/user.entity';
@@ -31,24 +34,35 @@ import { AuditLog } from './audit/audit-log.entity';
       isGlobal: true,
     }),
 
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false, 
-      },
-      entities: [
-        User,
-        Project,
-        Sprint,
-        BacklogItem,
-        Task,
-        Notification,
-        DailyReport,
-        AuditLog,
-      ],
-      synchronize: false,
-      logging: false,
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [{
+        ttl: config.get('THROTTLE_TTL') || 60000,
+        limit: config.get('THROTTLE_LIMIT') || 10,
+      }],
+    }),
+
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        url: configService.get<string>('DATABASE_URL'),
+        ssl: configService.get<string>('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+        entities: [
+          User,
+          Project,
+          Sprint,
+          BacklogItem,
+          Task,
+          Notification,
+          DailyReport,
+          AuditLog,
+        ],
+        synchronize: configService.get<string>('DB_SYNCHRONIZE') === 'true',
+        logging: configService.get<string>('DB_LOGGING') === 'true',
+      }),
     }),
 
     AuthModule,
@@ -62,6 +76,13 @@ import { AuditLog } from './audit/audit-log.entity';
     MailModule,
     WebhooksModule,
     AuditModule,
+    HealthModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

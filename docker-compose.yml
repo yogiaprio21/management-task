@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/management_task_db
+      - JWT_SECRET=supersecretkey
+      - FRONTEND_URL=http://localhost:5173
+    depends_on:
+      - db
+    networks:
+      - task-net
+
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    depends_on:
+      - backend
+    networks:
+      - task-net
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=management_task_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - task-net
+
+networks:
+  task-net:
+
+volumes:
+  postgres_data:

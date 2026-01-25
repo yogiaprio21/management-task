@@ -2,20 +2,34 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
+import * as compression from 'compression';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Security
+  app.use(helmet());
+  app.use(compression());
+
   /**
    * CORS Configuration
-   * Sesuaikan dengan domain frontend
    */
   app.enableCors({
-    origin: [
-      'http://localhost:5173', // dev
-      'http://localhost:3000', // dev alternatif
-      'https://management-task-iota.vercel.app', // production
-    ],
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'https://management-task-iota.vercel.app',
+        process.env.FRONTEND_URL, // Allow env var override
+      ].filter(Boolean);
+      
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
