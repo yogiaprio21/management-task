@@ -109,7 +109,7 @@ export async function runSeed(app: INestApplicationContext) {
 
   // 2. Create Project
   console.log('Creating Project...');
-  let project = (await projectsService.findAll())[0];
+  let project = (await projectsService.findAll(adminUser))[0];
   if (!project) {
     project = await projectsService.create({
       name: 'E-Commerce Platform Redesign',

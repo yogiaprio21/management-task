@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, VersionColumn, OneToMany, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, VersionColumn, OneToMany, ManyToOne, ManyToMany, JoinTable, Index } from 'typeorm';
 import { Sprint } from '../sprints/sprint.entity';
 import { BacklogItem } from '../backlog/backlog-item.entity';
 import { User } from '../users/user.entity';
@@ -15,10 +15,15 @@ export class Project {
   description: string;
 
   @Column()
+  @Index()
   ownerId: string;
 
   @ManyToOne(() => User, (user) => user.projects) 
   owner: User;
+
+  @ManyToMany(() => User, (user) => user.memberProjects)
+  @JoinTable({ name: 'project_members' })
+  members: User[];
 
   @OneToMany(() => Sprint, (sprint) => sprint.project)
   sprints: Sprint[];
@@ -27,6 +32,7 @@ export class Project {
   backlogItems: BacklogItem[];
 
   @CreateDateColumn()
+  @Index()
   createdAt: Date;
 
   @UpdateDateColumn()

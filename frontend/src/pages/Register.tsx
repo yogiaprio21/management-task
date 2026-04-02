@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, User } from 'lucide-react';
+import { Lock, Mail, User as UserIcon, ArrowRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Card } from '../ui/Card';
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -39,81 +43,97 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">
-            {isAuthenticated ? 'Create New User' : 'Create Account'}
-          </h2>
-          <p className="text-gray-500 mt-2">
-            {isAuthenticated ? 'Add a new user to the system' : 'Join us to manage your projects'}
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                required
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="email"
-                required
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="password"
-                required
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-primary hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {isLoading ? 'Creating...' : (isAuthenticated ? 'Create User' : 'Sign Up')}
-          </button>
-        </form>
-        
-        {!isAuthenticated && (
-          <div className="mt-6 text-center text-sm text-gray-500">
-            Already have an account?{' '}
-            <Link to="/login" className="text-primary hover:underline font-medium">
-              Sign In
-            </Link>
-          </div>
-        )}
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-4 relative overflow-hidden">
+      {/* Abstract Background Shapes */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-100/50 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-100/50 rounded-full blur-[100px]" />
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md w-full relative z-10"
+      >
+        <Card className="p-8 md:p-10 shadow-xl border-none">
+          <div className="text-center mb-10">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+              className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4"
+            >
+              <UserIcon className="w-8 h-8" />
+            </motion.div>
+            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
+              {isAuthenticated ? 'Add New Member' : 'Create Account'}
+            </h2>
+            <p className="text-slate-500 mt-2 font-medium">
+              {isAuthenticated ? 'Add a new member to your workspace' : 'Join us to manage your projects efficiently'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input
+              label="Full Name"
+              type="text"
+              required
+              placeholder="John Doe"
+              icon={<UserIcon className="w-5 h-5" />}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="bg-slate-50 border-slate-200"
+            />
+
+            <Input
+              label="Email Address"
+              type="email"
+              required
+              placeholder="you@example.com"
+              icon={<Mail className="w-5 h-5" />}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-slate-50 border-slate-200"
+            />
+
+            <Input
+              label="Password"
+              type="password"
+              required
+              placeholder="••••••••"
+              icon={<Lock className="w-5 h-5" />}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-slate-50 border-slate-200"
+            />
+
+            <Button
+              type="submit"
+              className="w-full h-12 text-base font-bold"
+              isLoading={isLoading}
+            >
+              {!isLoading && (
+                <>
+                  {isAuthenticated ? 'Create User' : 'Sign Up'}
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </>
+              )}
+            </Button>
+          </form>
+
+          {!isAuthenticated && (
+            <div className="mt-8 text-center">
+              <p className="text-slate-500 text-sm font-medium">
+                Already have an account?{' '}
+                <Link to="/login" className="text-primary font-bold hover:underline">
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          )}
+        </Card>
+      </motion.div>
     </div>
   );
 };

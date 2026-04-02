@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getProject } from '../api/projects';
-import { getBacklogItems, createBacklogItem, updateBacklogItem, deleteBacklogItem } from '../api/backlog';
+import { getProject, addProjectMember, removeProjectMember } from '../api/projects';
+import { getBacklogItems, createBacklogItem } from '../api/backlog';
 import { getSprints, createSprint } from '../api/sprints';
 import { getReports, createReport } from '../api/reports';
 import { getTasks, updateTask, deleteTask } from '../api/tasks';
@@ -16,25 +16,31 @@ import {
   MoreVertical,
   AlertCircle,
   Trash2,
-  Pencil,
-  X,
-  Check
+  Users,
+  UserPlus,
+  Mail,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import clsx from 'clsx';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Card } from '../ui/Card';
 import type { 
   CreateBacklogDto, 
   CreateSprintDto, 
   CreateReportDto,
   BacklogItem,
-  Report
+  Report,
+  User,
+  Sprint,
+  Task
 } from '../types';
-import type { Sprint, Task } from '../types';
 
 const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [activeTab, setActiveTab] = useState<'backlog' | 'board' | 'reports'>('backlog');
+  const [activeTab, setActiveTab] = useState<'backlog' | 'board' | 'reports' | 'members'>('backlog');
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -51,31 +57,12 @@ const ProjectDetail: React.FC = () => {
     enabled: !!id && activeTab === 'backlog',
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { mutate: _updateBacklog } = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateBacklogDto> }) => 
-      updateBacklogItem(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['backlog', id] });
-    }
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { mutate: _deleteBacklog } = useMutation({
-    mutationFn: deleteBacklogItem,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['backlog', id] });
-      toast.success('Backlog item deleted');
-    }
-  });
-
   const { data: sprints, isLoading: sprintsLoading } = useQuery({
     queryKey: ['sprints', id],
     queryFn: () => getSprints(id!),
     enabled: !!id && activeTab === 'board',
   });
   
-  // Assuming we show tasks for the first active sprint for now
   const activeSprint = sprints?.find(s => s.status === 'active') || sprints?.[0];
   
   const { data: tasks, isLoading: tasksLoading } = useQuery({
@@ -120,7 +107,6 @@ const ProjectDetail: React.FC = () => {
       updateTask(taskId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', activeSprint?.id] });
-      toast.success('Task updated');
     }
   });
 
@@ -129,6 +115,26 @@ const ProjectDetail: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', activeSprint?.id] });
       toast.success('Task deleted');
+    }
+  });
+
+  const addMemberMutation = useMutation({
+    mutationFn: (email: string) => addProjectMember(id!, email),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      toast.success('Member added successfully');
+    },
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Failed to add member');
+    }
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: (userId: string) => removeProjectMember(id!, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      toast.success('Member removed');
     }
   });
 
@@ -155,61 +161,83 @@ const ProjectDetail: React.FC = () => {
     return user?.role === 'admin' || (!!project && user?.id === project.ownerId);
   };
 
-  if (projectLoading) return <div className="p-8">Loading project...</div>;
-  if (!project) return <div className="p-8">Project not found</div>;
+  if (projectLoading) return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+      <Loader2 className="w-10 h-10 text-primary animate-spin" />
+      <p className="text-slate-500 font-medium">Loading project details...</p>
+    </div>
+  );
+
+  if (!project) return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+      <AlertCircle className="w-12 h-12 text-red-400" />
+      <h3 className="text-xl font-bold text-slate-900">Project not found</h3>
+      <Button variant="secondary" onClick={() => window.history.back()}>Go Back</Button>
+    </div>
+  );
+
+  const tabs = [
+    { id: 'backlog', label: 'Backlog', icon: LayoutList },
+    { id: 'board', label: 'Active Sprint', icon: KanbanSquare },
+    { id: 'reports', label: 'Reports', icon: BarChart3 },
+    { id: 'members', label: 'Members', icon: Users },
+  ] as const;
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
       {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
-        <p className="text-gray-500">{project.description}</p>
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col md:flex-row md:items-end justify-between gap-4"
+      >
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">{project.name}</h1>
+            <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full uppercase tracking-wider">
+              {project.owner?.name}'s Project
+            </span>
+          </div>
+          <p className="text-slate-500 max-w-2xl text-lg font-medium">{project.description}</p>
+        </div>
+        
+        <div className="flex items-center gap-2 text-slate-400 text-sm font-medium">
+          <Calendar className="w-4 h-4" />
+          Created {new Date(project.createdAt).toLocaleDateString()}
+        </div>
+      </motion.div>
+
+      {/* Tabs Navigation */}
+      <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-sm inline-flex w-full md:w-auto">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200
+                ${isActive 
+                  ? 'bg-primary text-white shadow-lg shadow-primary/25 scale-[1.02]' 
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}
+              `}
+            >
+              <Icon className={`w-4 h-4 ${isActive ? 'animate-pulse' : ''}`} />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-4">
-          <button
-            onClick={() => setActiveTab('backlog')}
-            className={clsx(
-              'flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition-colors',
-              activeTab === 'backlog' 
-                ? 'border-primary text-primary' 
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            )}
-          >
-            <LayoutList className="w-4 h-4" />
-            Backlog
-          </button>
-          <button
-            onClick={() => setActiveTab('board')}
-            className={clsx(
-              'flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition-colors',
-              activeTab === 'board' 
-                ? 'border-primary text-primary' 
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            )}
-          >
-            <KanbanSquare className="w-4 h-4" />
-            Active Sprint
-          </button>
-          <button
-            onClick={() => setActiveTab('reports')}
-            className={clsx(
-              'flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition-colors',
-              activeTab === 'reports' 
-                ? 'border-primary text-primary' 
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            )}
-          >
-            <BarChart3 className="w-4 h-4" />
-            Reports
-          </button>
-        </nav>
-      </div>
-
-      {/* Content */}
-      <div className="min-h-[400px]">
+      {/* Content Area */}
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, x: 10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
+        className="min-h-[500px]"
+      >
         {activeTab === 'backlog' && (
           <BacklogView 
             items={backlogItems || []} 
@@ -226,13 +254,9 @@ const ProjectDetail: React.FC = () => {
             tasks={tasks || []}
             isLoading={sprintsLoading || tasksLoading}
             onDragEnd={onDragEnd}
-            onStartSprint={() => {
-              // TODO: Implement start sprint logic (update sprint status)
-              toast('Start Sprint feature coming soon!', { icon: '🚀' });
-            }}
+            onStartSprint={() => toast('Start Sprint feature coming soon!', { icon: '🚀' })}
             onCreateSprint={(data) => createSprintMutation.mutate({ ...data, projectId: id! })}
             canManageSprint={canManageProject()}
-            onUpdateTask={(id, data) => updateTaskMutation.mutate({ taskId: id, data })}
             onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
           />
         )}
@@ -244,7 +268,18 @@ const ProjectDetail: React.FC = () => {
             onCreate={(data) => createReportMutation.mutate({ ...data, projectId: id! })}
           />
         )}
-      </div>
+
+        {activeTab === 'members' && (
+          <MembersView 
+            members={project.members || []}
+            ownerId={project.ownerId}
+            onAdd={(email) => addMemberMutation.mutate(email)}
+            onRemove={(userId) => removeMemberMutation.mutate(userId)}
+            canManage={canManageProject()}
+            isAdding={addMemberMutation.isPending}
+          />
+        )}
+      </motion.div>
     </div>
   );
 };
@@ -264,70 +299,96 @@ const BacklogView: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title.trim()) return;
     onCreate({ title, description: '', priority });
     setTitle('');
     setIsCreating(false);
   };
 
-  if (isLoading) return <div>Loading backlog...</div>;
+  if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Backlog Items</h3>
+        <h3 className="text-2xl font-bold text-slate-900">Backlog Items</h3>
         {canCreate && (
-          <button 
-            onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg text-sm hover:bg-blue-600"
-          >
+          <Button onClick={() => setIsCreating(true)} className="gap-2">
             <Plus className="w-4 h-4" /> Add Item
-          </button>
+          </Button>
         )}
       </div>
 
-      {isCreating && (
-        <form onSubmit={handleSubmit} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <div className="flex gap-4">
-            <input 
-              type="text" 
-              placeholder="What needs to be done?"
-              className="flex-1 px-3 py-2 border rounded-md"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              autoFocus
-            />
-            <select 
-              value={priority}
-              onChange={e => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-              className="px-3 py-2 border rounded-md"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-            <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Save</button>
-            <button type="button" onClick={() => setIsCreating(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-md">Cancel</button>
-          </div>
-        </form>
-      )}
+      <AnimatePresence>
+        {isCreating && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="bg-slate-50 border-slate-200">
+              <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-4">
+                <Input 
+                  placeholder="What needs to be done?"
+                  className="flex-1"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  autoFocus
+                />
+                <select 
+                  value={priority}
+                  onChange={e => setPriority(e.target.value as 'low' | 'medium' | 'high')}
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium"
+                >
+                  <option value="low">Low Priority</option>
+                  <option value="medium">Medium Priority</option>
+                  <option value="high">High Priority</option>
+                </select>
+                <div className="flex gap-2">
+                  <Button type="submit">Save Item</Button>
+                  <Button variant="ghost" type="button" onClick={() => setIsCreating(false)}>Cancel</Button>
+                </div>
+              </form>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="space-y-2">
-        {items.map((item) => (
-          <div key={item.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3">
-              <div className={clsx(
-                "w-2 h-2 rounded-full",
-                item.priority === 'high' ? 'bg-red-500' : 
-                item.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-              )} />
-              <span className="font-medium text-gray-700">{item.title}</span>
-            </div>
-            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-full capitalize">{item.status}</span>
-          </div>
+      <div className="grid gap-3">
+        {items.map((item, index) => (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            key={item.id}
+          >
+            <Card className="py-4 px-6 flex items-center justify-between group">
+              <div className="flex items-center gap-4">
+                <div className={`w-3 h-3 rounded-full shadow-sm ${
+                  item.priority === 'high' ? 'bg-red-500' : 
+                  item.priority === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
+                }`} />
+                <span className="font-bold text-slate-700">{item.title}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full ${
+                  item.status === 'done' ? 'bg-emerald-100 text-emerald-700' :
+                  item.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
+                }`}>
+                  {item.status}
+                </span>
+                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
         ))}
         {items.length === 0 && !isCreating && (
-          <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
-            No items in backlog
+          <div className="text-center py-20 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl">
+            <LayoutList className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <h4 className="text-slate-500 font-bold">No backlog items yet</h4>
+            <p className="text-slate-400 text-sm">Start by adding your first task to the backlog.</p>
           </div>
         )}
       </div>
@@ -343,110 +404,55 @@ const BoardView: React.FC<{
   onStartSprint: () => void;
   onCreateSprint: (data: Omit<CreateSprintDto, 'projectId'>) => void;
   canManageSprint: boolean;
-  onUpdateTask: (id: string, data: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
-}> = ({ sprint, tasks, isLoading, onDragEnd, onStartSprint, onCreateSprint, canManageSprint, onUpdateTask, onDeleteTask }) => {
+}> = ({ sprint, tasks, isLoading, onDragEnd, onStartSprint, onCreateSprint, canManageSprint, onDeleteTask }) => {
   const [isCreatingSprint, setIsCreatingSprint] = useState(false);
   const [sprintName, setSprintName] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
 
   const handleCreateSprint = (e: React.FormEvent) => {
     e.preventDefault();
-    onCreateSprint({
-      name: sprintName,
-      startDate,
-      endDate,
-    });
+    onCreateSprint({ name: sprintName, startDate, endDate });
     setIsCreatingSprint(false);
-    setSprintName('');
-    setStartDate('');
-    setEndDate('');
+    setSprintName(''); setStartDate(''); setEndDate('');
   };
 
-  const handleStartEdit = (task: Task) => {
-    setEditingTaskId(task.id);
-    setEditTitle(task.title);
-  };
-
-  const handleSaveEdit = (taskId: string) => {
-    onUpdateTask(taskId, { title: editTitle });
-    setEditingTaskId(null);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingTaskId(null);
-    setEditTitle('');
-  };
-
-  const handleDeleteTask = (taskId: string) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      onDeleteTask(taskId);
-    }
-  };
-
-  if (isLoading) return <div>Loading board...</div>;
+  if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary" /></div>;
   
   if (!sprint) return (
-    <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-      <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-      <h3 className="text-lg font-medium text-gray-900">No Active Sprint</h3>
-      <p className="text-gray-500 mb-6">Start a sprint to see the task board.</p>
+    <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 max-w-2xl mx-auto">
+      <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-6" />
+      <h3 className="text-2xl font-bold text-slate-900 mb-2">No Active Sprint</h3>
+      <p className="text-slate-500 mb-8 font-medium">Create a sprint to start organizing your work in the Kanban board.</p>
       
       {canManageSprint && !isCreatingSprint ? (
-        <button 
-          onClick={() => setIsCreatingSprint(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600"
-        >
-          <Calendar className="w-4 h-4" /> Create New Sprint
-        </button>
+        <Button onClick={() => setIsCreatingSprint(true)} size="lg" className="gap-2">
+          <Plus className="w-5 h-5" /> Create New Sprint
+        </Button>
       ) : isCreatingSprint ? (
-        <form onSubmit={handleCreateSprint} className="max-w-md mx-auto bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-left">
-          <h4 className="font-semibold mb-4">New Sprint Details</h4>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sprint Name</label>
-              <input 
-                type="text" 
-                required
-                className="w-full px-3 py-2 border rounded-lg"
-                value={sprintName}
-                onChange={e => setSprintName(e.target.value)}
-                placeholder="Sprint 1"
-              />
-            </div>
+        <Card className="max-w-md mx-auto text-left shadow-2xl border-none">
+          <h4 className="text-xl font-bold mb-6">Sprint Configuration</h4>
+          <form onSubmit={handleCreateSprint} className="space-y-5">
+            <Input 
+              label="Sprint Name"
+              required
+              value={sprintName}
+              onChange={e => setSprintName(e.target.value)}
+              placeholder="e.g. Q1 Sprint 1"
+            />
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                <input 
-                  type="date" 
-                  required
-                  className="w-full px-3 py-2 border rounded-lg"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                <input 
-                  type="date" 
-                  required
-                  className="w-full px-3 py-2 border rounded-lg"
-                  value={endDate}
-                  onChange={e => setEndDate(e.target.value)}
-                />
-              </div>
+              <Input label="Start Date" type="date" required value={startDate} onChange={e => setStartDate(e.target.value)} />
+              <Input label="End Date" type="date" required value={endDate} onChange={e => setEndDate(e.target.value)} />
             </div>
-            <div className="flex gap-3 pt-2">
-              <button type="submit" className="flex-1 bg-primary text-white py-2 rounded-lg hover:bg-blue-600">Create Sprint</button>
-              <button type="button" onClick={() => setIsCreatingSprint(false)} className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200">Cancel</button>
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" className="flex-1">Start Planning</Button>
+              <Button variant="secondary" type="button" onClick={() => setIsCreatingSprint(false)} className="flex-1">Cancel</Button>
             </div>
-          </div>
-        </form>
+          </form>
+        </Card>
       ) : (
-        <div className="text-gray-400 italic">You do not have permission to create sprints.</div>
+        <p className="text-slate-400 italic">Only project owners can manage sprints.</p>
       )}
     </div>
   );
@@ -466,44 +472,48 @@ const BoardView: React.FC<{
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">{sprint.name}</h3>
-          <p className="text-sm text-gray-500">
-            {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
+          <h3 className="text-2xl font-bold text-slate-900">{sprint.name}</h3>
+          <p className="text-slate-500 font-medium">
+            {new Date(sprint.startDate).toLocaleDateString()} — {new Date(sprint.endDate).toLocaleDateString()}
           </p>
         </div>
-        <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium flex items-center gap-2">
-          Active
+        <div className="flex items-center gap-3">
+          <div className="px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            Active
+          </div>
           {canManageSprint && (
-            <button onClick={onStartSprint} title="Sprint Options">
+            <Button variant="secondary" size="sm" onClick={onStartSprint}>
               <MoreVertical className="w-4 h-4" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-300px)] overflow-x-auto">
+        <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide min-h-[600px]">
           {(Object.keys(columns) as Array<keyof typeof columns>).map(colId => (
-            <div key={colId} className="flex flex-col bg-gray-50 rounded-xl p-4 min-w-[280px]">
-              <h4 className="font-semibold text-gray-700 mb-4 flex items-center justify-between">
-                {columnTitles[colId]}
-                <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs">
-                  {columns[colId].length}
-                </span>
-              </h4>
+            <div key={colId} className="flex flex-col bg-slate-100/50 rounded-2xl p-4 min-w-[300px] border border-slate-200/50">
+              <div className="flex items-center justify-between mb-4 px-2">
+                <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                  {columnTitles[colId]}
+                  <span className="bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full text-[10px] font-black">
+                    {columns[colId].length}
+                  </span>
+                </h4>
+              </div>
               
               <Droppable droppableId={colId}>
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={clsx(
-                      "flex-1 space-y-3 transition-colors rounded-lg",
-                      snapshot.isDraggingOver ? "bg-blue-50" : ""
-                    )}
+                    className={`flex-1 space-y-4 transition-all duration-200 rounded-xl p-1 ${
+                      snapshot.isDraggingOver ? "bg-primary/5 ring-2 ring-primary/20 ring-inset" : ""
+                    }`}
                   >
                     {columns[colId].map((task, index) => (
                       <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -512,48 +522,32 @@ const BoardView: React.FC<{
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={clsx(
-                              "bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all group",
-                              snapshot.isDragging ? "rotate-2 shadow-lg ring-2 ring-primary ring-opacity-50" : ""
-                            )}
+                            className={`
+                              bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all group
+                              ${snapshot.isDragging ? "rotate-3 shadow-2xl ring-2 ring-primary z-50 scale-105" : ""}
+                            `}
                           >
-                            {editingTaskId === task.id ? (
-                              <div className="mb-2">
-                                <input
-                                  type="text"
-                                  value={editTitle}
-                                  onChange={(e) => setEditTitle(e.target.value)}
-                                  className="w-full px-2 py-1 border rounded text-sm mb-2"
-                                  autoFocus
-                                />
-                                <div className="flex gap-2 justify-end">
-                                  <button onClick={() => handleSaveEdit(task.id)} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check className="w-4 h-4" /></button>
-                                  <button onClick={handleCancelEdit} className="p-1 text-gray-500 hover:bg-gray-100 rounded"><X className="w-4 h-4" /></button>
-                                </div>
+                            <div className="flex justify-between items-start mb-3 gap-3">
+                              <h5 className="font-bold text-slate-800 leading-tight group-hover:text-primary transition-colors">{task.title}</h5>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => onDeleteTask(task.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               </div>
-                            ) : (
-                              <div className="flex justify-between items-start mb-2 gap-2">
-                                <h5 className="font-medium text-gray-900 break-words flex-1">{task.title}</h5>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => handleStartEdit(task)} className="p-1 text-gray-400 hover:text-blue-600 rounded">
-                                    <Pencil className="w-3 h-3" />
-                                  </button>
-                                  <button onClick={() => handleDeleteTask(task.id)} className="p-1 text-gray-400 hover:text-red-600 rounded">
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              </div>
-                            )}
+                            </div>
                             
-                            <div className="flex items-center justify-between mt-3">
-                               <div className={clsx(
-                                "w-2 h-2 rounded-full",
-                                task.priority === 'high' ? 'bg-red-500' : 
-                                task.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                              )} />
+                            <div className="flex items-center justify-between mt-4">
+                               <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                                task.priority === 'high' ? 'bg-red-100 text-red-600' : 
+                                task.priority === 'medium' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
+                              }`}>
+                                {task.priority}
+                              </div>
                               {task.assignee && (
-                                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold" title={task.assignee.name}>
-                                  {task.assignee.name.charAt(0)}
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full bg-primary/10 text-primary border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-black" title={task.assignee.name}>
+                                    {task.assignee.name.split(' ').map(n => n[0]).join('')}
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -584,94 +578,179 @@ const ReportsView: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!content.trim()) return;
     onCreate({ content, type });
     setContent('');
     setIsCreating(false);
   };
 
-  if (isLoading) return <div>Loading reports...</div>;
+  if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Project Reports</h3>
-        <button 
-          onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg text-sm hover:bg-blue-600"
-        >
+        <h3 className="text-2xl font-bold text-slate-900">Project Intelligence</h3>
+        <Button onClick={() => setIsCreating(true)} className="gap-2">
           <Plus className="w-4 h-4" /> Create Report
-        </button>
+        </Button>
       </div>
 
-      {isCreating && (
-        <form onSubmit={handleSubmit} className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input 
-                  type="radio" 
-                  name="type" 
-                  value="daily" 
-                  checked={type === 'daily'} 
-                  onChange={() => setType('daily')}
-                  className="text-primary focus:ring-primary"
+      <AnimatePresence>
+        {isCreating && (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+            <Card className="bg-slate-50 border-slate-200">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="flex gap-4">
+                  {(['daily', 'weekly'] as const).map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setType(t)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+                        type === t ? 'bg-primary text-white shadow-md' : 'bg-white text-slate-500 border border-slate-200'
+                      }`}
+                    >
+                      {t === 'daily' ? 'Daily Standup' : 'Weekly Summary'}
+                    </button>
+                  ))}
+                </div>
+                <textarea 
+                  required
+                  rows={4}
+                  className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium text-slate-700 transition-all"
+                  placeholder={type === 'daily' ? "What's the progress today?" : "Key milestones this week..."}
+                  value={content}
+                  onChange={e => setContent(e.target.value)}
                 />
-                <span className="text-sm text-gray-700">Daily Standup</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input 
-                  type="radio" 
-                  name="type" 
-                  value="weekly" 
-                  checked={type === 'weekly'} 
-                  onChange={() => setType('weekly')}
-                  className="text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-gray-700">Weekly Summary</span>
-              </label>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-            <textarea 
-              required
-              rows={4}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none"
-              placeholder={type === 'daily' ? "What did you do yesterday? What will you do today? Any blockers?" : "Summary of the week's progress..."}
-              value={content}
-              onChange={e => setContent(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-3">
-            <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Save Report</button>
-            <button type="button" onClick={() => setIsCreating(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg">Cancel</button>
-          </div>
-        </form>
-      )}
+                <div className="flex gap-2">
+                  <Button type="submit">Publish Report</Button>
+                  <Button variant="ghost" type="button" onClick={() => setIsCreating(false)}>Cancel</Button>
+                </div>
+              </form>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="grid gap-4">
-        {reports.map((report) => (
-          <div key={report.id} className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-            <div className="flex justify-between items-start mb-2">
-              <span className={clsx(
-                "px-2 py-1 text-xs font-medium rounded-full uppercase",
-                report.type === 'daily' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-              )}>
-                {report.type}
-              </span>
-              <span className="text-sm text-gray-400">
-                {new Date(report.createdAt).toLocaleDateString()}
-              </span>
-            </div>
-            <p className="text-gray-700 whitespace-pre-wrap">{report.content}</p>
-          </div>
+      <div className="grid gap-6">
+        {reports.map((report, index) => (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} key={report.id}>
+            <Card className="p-8">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full ${
+                    report.type === 'daily' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'
+                  }`}>
+                    {report.type}
+                  </span>
+                  <div className="h-4 w-px bg-slate-200" />
+                  <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(report.createdAt).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                  </span>
+                </div>
+                <Button variant="ghost" size="sm"><MoreVertical className="w-4 h-4" /></Button>
+              </div>
+              <p className="text-slate-700 text-lg leading-relaxed font-medium whitespace-pre-wrap">{report.content}</p>
+            </Card>
+          </motion.div>
         ))}
         {reports.length === 0 && (
-           <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
-            No reports available
+           <div className="text-center py-20 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl">
+            <BarChart3 className="w-16 h-16 text-slate-300 mx-auto mb-6" />
+            <h4 className="text-slate-500 font-bold">Insights needed</h4>
+            <p className="text-slate-400 text-sm">Create your first report to track project velocity.</p>
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+const MembersView: React.FC<{
+  members: User[];
+  ownerId: string;
+  onAdd: (email: string) => void;
+  onRemove: (userId: string) => void;
+  canManage: boolean;
+  isAdding: boolean;
+}> = ({ members, ownerId, onAdd, onRemove, canManage, isAdding }) => {
+  const [email, setEmail] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    onAdd(email);
+    setEmail('');
+    setIsFormOpen(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-2xl font-bold text-slate-900">Collaboration Team</h3>
+        {canManage && (
+          <Button onClick={() => setIsFormOpen(true)} className="gap-2">
+            <UserPlus className="w-4 h-4" /> Invite Member
+          </Button>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {isFormOpen && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <Card className="bg-slate-50 border-slate-200 max-w-xl">
+              <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-4">
+                <Input 
+                  placeholder="Collaborator's email address"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  icon={<Mail className="w-5 h-5" />}
+                  className="flex-1"
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" isLoading={isAdding}>Send Invite</Button>
+                  <Button variant="ghost" type="button" onClick={() => setIsFormOpen(false)}>Cancel</Button>
+                </div>
+              </form>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {members.map((member, index) => (
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.05 }} key={member.id}>
+            <Card className="p-6 flex items-center justify-between group overflow-hidden relative">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-lg border-2 border-primary/5">
+                  {member.name.charAt(0)}
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                    {member.name}
+                    {member.id === ownerId && (
+                      <span className="text-[9px] font-black uppercase bg-slate-900 text-white px-2 py-0.5 rounded-full tracking-tighter">Owner</span>
+                    )}
+                  </h4>
+                  <p className="text-slate-400 text-xs font-medium">{member.email}</p>
+                </div>
+              </div>
+              
+              {canManage && member.id !== ownerId && (
+                <button 
+                  onClick={() => { if(window.confirm(`Remove ${member.name}?`)) onRemove(member.id); }}
+                  className="opacity-0 group-hover:opacity-100 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              )}
+            </Card>
+          </motion.div>
+        ))}
       </div>
     </div>
   );

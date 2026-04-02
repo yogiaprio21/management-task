@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToMany } from 'typeorm';
 import { Task } from '../tasks/task.entity';
 import { Project } from '../projects/project.entity';
 import { Notification } from '../notifications/notification.entity';
@@ -34,6 +34,9 @@ export class User {
   
   @OneToMany(() => Project, (project) => project.owner)
   projects: Project[];
+
+  @ManyToMany(() => Project, (project) => project.members)
+  memberProjects: Project[];
 
   @OneToMany(() => BacklogItem, (item) => item.assignee)
   backlogItems: BacklogItem[];

@@ -11,6 +11,7 @@ export interface Project {
   description: string;
   ownerId: string;
   owner?: User;
+  members: User[];
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;

@@ -25,3 +25,13 @@ export const deleteProject = async (id: string) => {
   const response = await api.delete(`/projects/${id}`);
   return response.data;
 };
+
+export const addProjectMember = async (projectId: string, email: string) => {
+  const response = await api.post<Project>(`/projects/${projectId}/members`, { email });
+  return response.data;
+};
+
+export const removeProjectMember = async (projectId: string, userId: string) => {
+  const response = await api.delete(`/projects/${projectId}/members/${userId}`);
+  return response.data;
+};
