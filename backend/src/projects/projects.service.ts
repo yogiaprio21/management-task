@@ -5,6 +5,7 @@ import { Project } from './project.entity';
 import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
 import { AddMemberDto } from './dto/add-member.dto';
+import { MailService } from '../integrations/mail/mail.service';
 
 @Injectable()
 export class ProjectsService {
@@ -14,6 +15,7 @@ export class ProjectsService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private auditService: AuditService,
+    private mailService: MailService,
   ) {}
 
   async create(projectData: Partial<Project>, user: User): Promise<Project> {
@@ -68,7 +70,14 @@ export class ProjectsService {
       userToAdd = await this.usersRepository.findOne({ where: { id: addMemberDto.userId } });
     }
 
-    if (!userToAdd) throw new NotFoundException('User not found');
+    if (!userToAdd) {
+      if (addMemberDto.email) {
+        // Send invitation email to unregistered user
+        await this.mailService.sendInvitation(addMemberDto.email, project.name, currentUser.name);
+        return project; // Return current project state, but email sent
+      }
+      throw new NotFoundException(`User with email "${addMemberDto.email}" not found`);
+    }
 
     if (project.members.some(m => m.id === userToAdd.id)) {
       throw new BadRequestException('User is already a member of this project');
@@ -76,6 +85,10 @@ export class ProjectsService {
 
     project.members.push(userToAdd);
     const savedProject = await this.projectsRepository.save(project);
+    
+    // Send notification email to existing user
+    await this.mailService.sendProjectJoinNotification(userToAdd.email, project.name, currentUser.name);
+    
     await this.auditService.log('add_member', 'Project', id, currentUser, { memberId: userToAdd.id });
     return savedProject;
   }

@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
+import Logo from '../components/Logo';
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -34,9 +35,8 @@ const Register: React.FC = () => {
         toast.success('Registration successful! Please login.');
         navigate('/login');
       }
-    } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Registration failed');
+    } catch {
+      // Error handled globally
     } finally {
       setIsLoading(false);
     }
@@ -57,25 +57,26 @@ const Register: React.FC = () => {
         className="max-w-md w-full relative z-10"
       >
         <Card className="p-8 md:p-10 shadow-xl border-none">
-          <div className="text-center mb-10">
+          <div className="text-center mb-10 flex flex-col items-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4"
+              className="mb-6"
             >
-              <UserIcon className="w-8 h-8" />
+              <Logo size={64} showText={false} />
             </motion.div>
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
               {isAuthenticated ? 'Add New Member' : 'Create Account'}
             </h2>
             <p className="text-slate-500 mt-2 font-medium">
-              {isAuthenticated ? 'Add a new member to your workspace' : 'Join us to manage your projects efficiently'}
+              {isAuthenticated ? 'Add a new member to your workspace' : 'Join TaskFlow to manage your projects efficiently'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
+              id="name"
               label="Full Name"
               type="text"
               required
@@ -87,6 +88,7 @@ const Register: React.FC = () => {
             />
 
             <Input
+              id="email"
               label="Email Address"
               type="email"
               required
@@ -98,6 +100,7 @@ const Register: React.FC = () => {
             />
 
             <Input
+              id="password"
               label="Password"
               type="password"
               required

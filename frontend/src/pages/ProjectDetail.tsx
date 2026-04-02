@@ -120,14 +120,17 @@ const ProjectDetail: React.FC = () => {
 
   const addMemberMutation = useMutation({
     mutationFn: (email: string) => addProjectMember(id!, email),
-    onSuccess: () => {
+    onSuccess: (updatedProject, email) => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
-      toast.success('Member added successfully');
+      
+      const isActuallyAdded = updatedProject.members.some(m => m.email === email);
+      if (isActuallyAdded) {
+        toast.success('Member added successfully');
+      } else {
+        toast.success(`Invitation sent to ${email}`, { icon: '✉️' });
+      }
     },
-    onError: (err: unknown) => {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Failed to add member');
-    }
+    // Error is handled globally by api/client.ts
   });
 
   const removeMemberMutation = useMutation({

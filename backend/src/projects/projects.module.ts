@@ -5,11 +5,13 @@ import { ProjectsController } from './projects.controller';
 import { Project } from './project.entity';
 import { User } from '../users/user.entity';
 import { AuditModule } from '../audit/audit.module';
+import { MailModule } from '../integrations/mail/mail.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Project, User]),
     AuditModule,
+    MailModule,
   ],
   providers: [ProjectsService],
   controllers: [ProjectsController],

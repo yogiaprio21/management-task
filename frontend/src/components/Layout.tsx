@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { LayoutDashboard, FolderKanban, CheckSquare, LogOut, Menu, X, Users, Moon, Sun } from 'lucide-react';
 import clsx from 'clsx';
+import Logo from './Logo';
 
 const Layout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -31,10 +32,9 @@ const Layout: React.FC = () => {
     <div className="flex flex-col md:flex-row h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow-sm">
-        <h1 className="text-xl font-bold text-primary flex items-center gap-2">
-          <LayoutDashboard className="w-6 h-6" />
-          Task Manager
-        </h1>
+        <Link to="/" className="flex items-center gap-2">
+          <Logo size={28} />
+        </Link>
         <div className="flex items-center gap-2">
           <button
             onClick={toggleTheme}
@@ -100,10 +100,9 @@ const Layout: React.FC = () => {
       {/* Sidebar - Desktop */}
       <div className="hidden md:flex w-64 bg-white dark:bg-gray-800 shadow-lg flex-col transition-colors duration-200">
         <div className="p-6 border-b dark:border-gray-700">
-          <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
-            <LayoutDashboard className="w-8 h-8" />
-            Task Manager
-          </h1>
+          <Link to="/" className="flex items-center gap-2">
+            <Logo size={32} />
+          </Link>
         </div>
         
         <nav className="flex-1 p-4 space-y-2">

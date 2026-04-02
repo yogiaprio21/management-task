@@ -44,6 +44,8 @@ export const Button: React.FC<ButtonProps> = ({
         className
       )}
       disabled={isLoading || disabled}
+      aria-busy={isLoading}
+      aria-live="polite"
       {...props}
     >
       {isLoading && (

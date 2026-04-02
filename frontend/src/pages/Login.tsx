@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
+import Logo from '../components/Logo';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -25,9 +26,8 @@ const Login: React.FC = () => {
       await login(data.access_token);
       toast.success('Welcome back!');
       navigate('/');
-    } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Login failed');
+    } catch {
+      // Error handled globally
     } finally {
       setIsLoading(false);
     }
@@ -48,21 +48,22 @@ const Login: React.FC = () => {
         className="max-w-md w-full relative z-10"
       >
         <Card className="p-8 md:p-10 shadow-xl border-none">
-          <div className="text-center mb-10">
+          <div className="text-center mb-10 flex flex-col items-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4"
+              className="mb-6"
             >
-              <Lock className="w-8 h-8" />
+              <Logo size={64} showText={false} />
             </motion.div>
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Welcome Back</h2>
-            <p className="text-slate-500 mt-2 font-medium">Sign in to manage your tasks efficiently</p>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Welcome Back</h2>
+            <p className="text-slate-500 mt-2 font-medium">Sign in to Task<span className="text-primary">Flow</span></p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
+              id="email"
               label="Email Address"
               type="email"
               required
@@ -75,10 +76,11 @@ const Login: React.FC = () => {
 
             <div className="space-y-1">
               <div className="flex justify-between items-center">
-                <label className="text-sm font-semibold text-slate-700">Password</label>
+                <label htmlFor="password" className="text-sm font-semibold text-slate-700">Password</label>
                 <Link to="#" className="text-xs font-semibold text-primary hover:underline">Forgot password?</Link>
               </div>
               <Input
+                id="password"
                 type="password"
                 required
                 placeholder="••••••••"

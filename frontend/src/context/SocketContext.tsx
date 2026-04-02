@@ -22,7 +22,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return null;
     }
 
-    return io('http://localhost:3000', {
+    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return io(backendUrl, {
       auth: {
         token: localStorage.getItem('token'),
       },
