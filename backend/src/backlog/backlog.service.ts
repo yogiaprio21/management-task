@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BacklogItem } from './backlog-item.entity';
-import { User } from 'src/users/user.entity';
+import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()

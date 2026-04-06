@@ -3,7 +3,7 @@ import { BacklogService } from './backlog.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { User } from 'src/users/user.entity';
+import { User } from '../users/user.entity';
 
 @ApiTags('backlog')
 @ApiBearerAuth()

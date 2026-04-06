@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sprint } from './sprint.entity';
 import { User } from '../users/user.entity';
-import { AuditService } from 'src/audit/audit.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class SprintsService {

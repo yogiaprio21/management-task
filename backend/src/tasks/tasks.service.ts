@@ -5,7 +5,7 @@ import { Task } from './task.entity';
 import { Comment } from './comment.entity';
 import { Attachment } from './attachment.entity';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
-import { User } from 'src/users/user.entity';
+import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()

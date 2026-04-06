@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Project } from './project.entity';
 import { User } from '../users/user.entity';
-import { AuditService } from 'src/audit/audit.service';
+import { AuditService } from '../audit/audit.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { MailService } from '../integrations/mail/mail.service';
 

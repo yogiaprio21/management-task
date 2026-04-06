@@ -7,11 +7,14 @@ import { getTasks, updateTask } from '../api/tasks';
 import { KanbanSquare, Loader2, Calendar } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Card } from '../ui/Card';
-import type { Task } from '../types';
+import type { Task, UpdateTaskDto } from '../types';
+import TaskModal from '../components/TaskModal';
 
 const SprintBoard: React.FC = () => {
   const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ['projects'],
@@ -140,7 +143,11 @@ const SprintBoard: React.FC = () => {
                                      ref={provided.innerRef}
                                      {...provided.draggableProps}
                                      {...provided.dragHandleProps}
-                                     className={`bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all ${snapshot.isDragging ? "rotate-3 shadow-2xl ring-2 ring-primary scale-105 z-50" : ""}`}
+                                     onClick={() => {
+                                       setSelectedTask(task);
+                                       setIsModalOpen(true);
+                                     }}
+                                     className={`bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md cursor-pointer transition-all ${snapshot.isDragging ? "rotate-3 shadow-2xl ring-2 ring-primary scale-105 z-50" : ""}`}
                                    >
                                       <span className={`px-2 py-1 text-[10px] font-black rounded-md uppercase ${
                                         task.priority === 'high' ? 'bg-red-100 text-red-700' :
@@ -164,6 +171,19 @@ const SprintBoard: React.FC = () => {
           </div>
         </div>
       )}
+
+      <TaskModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={(data) => {
+          if (selectedTask) {
+            updateTaskMutation.mutate({ taskId: selectedTask.id, data: data as UpdateTaskDto });
+          }
+          setIsModalOpen(false);
+        }}
+        task={selectedTask}
+        isCreating={false}
+      />
     </div>
   );
 };

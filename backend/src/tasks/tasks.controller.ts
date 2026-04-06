@@ -1,9 +1,9 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { TasksService } from './tasks.service';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { User } from 'src/users/user.entity';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { User } from '../users/user.entity';
 
 @ApiTags('tasks')
 @ApiBearerAuth()
