@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } f
 import { SprintsService } from './sprints.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { User } from '../users/user.entity';
 
 @ApiTags('sprints')
@@ -18,13 +18,13 @@ export class SprintsController {
   }
 
   @Get()
-  findAll(@Query('projectId') projectId: string) {
-    return this.sprintsService.findAllByProject(projectId);
+  findAll(@Query('projectId') projectId: string, @CurrentUser() user: User) {
+    return this.sprintsService.findAllByProject(projectId, user);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.sprintsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.sprintsService.findOne(id, user);
   }
 
   @Patch(':id')

@@ -58,8 +58,8 @@ const Dashboard: React.FC = () => {
         className="flex flex-col md:flex-row md:items-center justify-between gap-6"
       >
         <div className="space-y-2">
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Project Dashboard</h1>
-          <p className="text-slate-500 text-lg font-medium">Overview of your active workspace and team progress.</p>
+          <h1 className="section-title">Project Dashboard</h1>
+          <p className="section-subtitle">Overview of your active workspace and team progress.</p>
         </div>
         <Button onClick={() => setIsCreating(true)} size="lg" className="shadow-primary/20 gap-2">
           <Plus className="w-5 h-5" /> New Project
@@ -80,7 +80,7 @@ const Dashboard: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.1 }}
           >
-            <Card className="p-6 flex items-center gap-4">
+            <Card className="p-6 flex items-center gap-4 card-gradient">
               <div className={`p-4 rounded-2xl ${stat.bg} ${stat.color}`}>
                 <stat.icon className="w-6 h-6" />
               </div>
@@ -109,9 +109,9 @@ const Dashboard: React.FC = () => {
               transition={{ delay: 0.2 + i * 0.1 }}
             >
               <Link to={`/projects/${project.id}`}>
-                <Card className="h-full p-8 flex flex-col justify-between group cursor-pointer border-2 border-transparent hover:border-primary/20">
+                <Card className="h-full p-8 flex flex-col justify-between group cursor-pointer card-gradient">
                   <div className="space-y-4">
-                    <div className="w-14 h-14 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300">
+                    <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300">
                       <Layout className="w-7 h-7" />
                     </div>
                     <div>
@@ -119,9 +119,9 @@ const Dashboard: React.FC = () => {
                       <p className="text-slate-500 mt-2 line-clamp-2 font-medium">{project.description || 'No description provided.'}</p>
                     </div>
                   </div>
-                  <div className="mt-8 flex items-center justify-between pt-6 border-t border-slate-50">
+                  <div className="mt-8 flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-700">
                     <div className="flex -space-x-2">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-black text-slate-400">
+                      <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 dark:text-slate-300">
                         +1
                       </div>
                     </div>
@@ -135,7 +135,7 @@ const Dashboard: React.FC = () => {
           ))}
           
           {projects?.length === 0 && (
-            <div className="col-span-full py-20 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl text-center">
+            <div className="col-span-full py-20 bg-slate-100/50 border-2 border-dashed border-slate-200 rounded-3xl text-center">
               <Layout className="w-16 h-16 text-slate-300 mx-auto mb-6" />
               <h3 className="text-xl font-bold text-slate-900 mb-2">No projects found</h3>
               <p className="text-slate-500 mb-8 font-medium text-lg">Create your first project to start tracking your work.</p>
@@ -155,13 +155,13 @@ const Dashboard: React.FC = () => {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="w-full max-w-lg"
             >
-              <Card className="p-8 md:p-10 shadow-2xl border-none overflow-hidden relative">
+              <Card className="p-8 md:p-10 shadow-2xl border-none overflow-hidden relative card-gradient">
                 <div className="flex justify-between items-start mb-8">
                   <div>
-                    <h2 className="text-2xl font-black text-slate-900">New Project</h2>
-                    <p className="text-slate-500 font-medium">Define your project workspace</p>
+                    <h2 className="section-title">New Project</h2>
+                    <p className="section-subtitle">Define your project workspace</p>
                   </div>
-                  <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                  <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
                     <X className="w-6 h-6 text-slate-400" />
                   </button>
                 </div>
@@ -176,9 +176,9 @@ const Dashboard: React.FC = () => {
                     autoFocus
                   />
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-slate-700">Description</label>
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Description</label>
                     <textarea
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium text-slate-700 transition-all min-h-[120px]"
+                      className="w-full bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium text-slate-700 dark:text-slate-200 transition-all min-h-[120px]"
                       placeholder="What is this project about?"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}

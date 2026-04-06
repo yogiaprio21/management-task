@@ -6,11 +6,14 @@ import helmet from 'helmet';
 import * as compression from 'compression';
 
 async function bootstrap() {
+  console.log('[1/7] Starting bootstrap process...');
   const app = await NestFactory.create(AppModule);
+  console.log('[2/7] Nest application instance created.');
 
   // Security
   app.use(helmet());
   app.use(compression());
+  console.log('[3/7] Security middleware (Helmet, Compression) applied.');
 
   /**
    * CORS Configuration
@@ -35,6 +38,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
+  console.log('[4/7] CORS enabled.');
 
   /**
    * Global Validation Pipe
@@ -46,6 +50,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+  console.log('[5/7] Global validation pipe set.');
 
   /**
    * Swagger API Documentation (Non-production only)
@@ -60,6 +65,7 @@ async function bootstrap() {
 
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api', app, document);
+    console.log('[6/7] Swagger UI configured at /api.');
   }
 
   /**
@@ -73,7 +79,7 @@ async function bootstrap() {
   console.log(`   - DB_SSL: ${process.env.DB_SSL}`);
 
   await app.listen(port);
-  console.log(`🚀 Backend running on port ${port}`);
+  console.log(`[7/7] 🚀 Backend running on port ${port}`);
 
   // Run Seed in Production if Needed (Non-blocking)
   if (process.env.NODE_ENV === 'production') {

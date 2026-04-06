@@ -3,9 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProjectsService } from './projects.service';
 import { ProjectsController } from './projects.controller';
 import { Project } from './project.entity';
-import { User } from '../users/user.entity';
+import { User } from 'src/users/user.entity';
 import { AuditModule } from '../audit/audit.module';
-import { MailModule } from '../integrations/mail/mail.module';
+import { MailModule } from 'src/integrations/mail/mail.module';
 
 @Module({
   imports: [

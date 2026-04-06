@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BacklogItem } from './backlog-item.entity';
-import { User } from '../users/user.entity';
+import { User } from 'src/users/user.entity';
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()
@@ -20,36 +20,65 @@ export class BacklogService {
     return savedItem;
   }
 
-  async findAllByProject(projectId: string): Promise<BacklogItem[]> {
+  async findAllByProject(projectId: string, user: User): Promise<BacklogItem[]> {
+    // Check access
+    const project = await this.backlogRepository.manager.getRepository('Project').findOne({
+      where: { id: projectId },
+      relations: ['members']
+    }) as any;
+
+    if (!project) throw new NotFoundException('Project not found');
+
+    const isMember = project.members.some(m => m.id === user.id);
+    const isOwner = project.ownerId === user.id;
+
+    if (!isOwner && !isMember && user.role !== 'admin') {
+      throw new ForbiddenException('You do not have access to this project');
+    }
+
     return this.backlogRepository.find({ where: { projectId } });
   }
 
-  async findOne(id: string): Promise<BacklogItem> {
-    const item = await this.backlogRepository.findOne({ where: { id } });
+  async findOne(id: string, user: User): Promise<BacklogItem> {
+    const item = await this.backlogRepository.findOne({ 
+      where: { id },
+      relations: ['project', 'project.members']
+    }) as any;
     if (!item) throw new NotFoundException('Backlog item not found');
+
+    const isMember = item.project.members.some(m => m.id === user.id);
+    const isOwner = item.project.ownerId === user.id;
+
+    if (!isOwner && !isMember && user.role !== 'admin') {
+      throw new ForbiddenException('You do not have access to this backlog item');
+    }
+
     return item;
   }
 
   async update(id: string, itemData: Partial<BacklogItem>, user: User): Promise<BacklogItem> {
-    const item = await this.findOne(id);
+    const item = await this.findOne(id, user);
 
-    // RBAC: Admin or Assignee
+    // RBAC: Admin or Assignee or Project Owner
     const isAssignee = item.assigneeId === user.id;
-    if (user.role !== 'admin' && !isAssignee) {
+    const isProjectOwner = (item.project as any).ownerId === user.id;
+
+    if (user.role !== 'admin' && !isAssignee && !isProjectOwner) {
       throw new ForbiddenException('You are not authorized to update this backlog item');
     }
 
     await this.backlogRepository.update(id, itemData);
     await this.auditService.log('update', 'BacklogItem', id, user, itemData);
-    return this.findOne(id);
+    return this.findOne(id, user);
   }
 
   async remove(id: string, user: User): Promise<void> {
-    const item = await this.findOne(id);
+    const item = await this.findOne(id, user);
 
-    // RBAC: Admin only
-    if (user.role !== 'admin') {
-      throw new ForbiddenException('Only admins can delete backlog items');
+    // RBAC: Admin or Project Owner
+    const isProjectOwner = (item.project as any).ownerId === user.id;
+    if (user.role !== 'admin' && !isProjectOwner) {
+      throw new ForbiddenException('Only admins or project owners can delete backlog items');
     }
 
     await this.backlogRepository.softDelete(id);

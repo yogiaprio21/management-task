@@ -4,6 +4,34 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 font-sans;
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
   }
+}
+
+@layer components {
+  .section-title {
+    @apply text-3xl font-black text-slate-900 tracking-tight;
+  }
+  
+  .section-subtitle {
+    @apply text-slate-500 text-lg font-medium;
+  }
+  
+  .card-gradient {
+    @apply bg-gradient-to-br from-white to-slate-50/50 dark:from-slate-800 dark:to-slate-900/50 border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 dark:bg-slate-700 rounded-full hover:bg-slate-300 dark:hover:bg-slate-600;
 }

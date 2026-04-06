@@ -7,7 +7,7 @@ import { getSprints, createSprint } from '../api/sprints';
 import { getReports, createReport } from '../api/reports';
 import { getTasks, updateTask, deleteTask } from '../api/tasks';
 import { useAuth } from '../context/AuthContext';
-import { 
+import {
   LayoutList, 
   KanbanSquare, 
   BarChart3, 
@@ -19,7 +19,8 @@ import {
   Users,
   UserPlus,
   Mail,
-  Loader2
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
@@ -27,6 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
+import TaskModal from '../components/TaskModal';
 import type { 
   CreateBacklogDto, 
   CreateSprintDto, 
@@ -35,12 +37,15 @@ import type {
   Report,
   User,
   Sprint,
-  Task
+  Task,
+  UpdateTaskDto
 } from '../types';
 
 const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<'backlog' | 'board' | 'reports' | 'members'>('backlog');
+  const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -146,11 +151,16 @@ const ProjectDetail: React.FC = () => {
     if (!result.destination) return;
     const { draggableId, destination } = result;
     
-    // RBAC Check for moving tasks
-    // Everyone can move tasks in Kanban usually, but if strict:
-    // Team Member: only update assigned task.
-    // Let's assume Drag & Drop is allowed but backend will reject if unauthorized.
-    // However, for better UX, we could check here.
+    // Permission Check: Admin, Project Owner, or Assignee
+    const task = tasks?.find(t => t.id === draggableId);
+    const isOwner = project?.ownerId === user?.id;
+    const isAssignee = task?.assigneeId === user?.id;
+    const isAdmin = user?.role === 'admin';
+
+    if (!isAdmin && !isOwner && !isAssignee) {
+      toast.error('You do not have permission to move this task');
+      return;
+    }
     
     if (result.source.droppableId !== destination.droppableId) {
        updateTaskMutation.mutate({ 
@@ -186,8 +196,35 @@ const ProjectDetail: React.FC = () => {
     { id: 'members', label: 'Members', icon: Users },
   ] as const;
 
+  const handleBacklogItemClick = (item: BacklogItem) => {
+    // Convert BacklogItem to a Task-like object for the modal
+    const taskFromBacklog: Task = {
+      ...item,
+      comments: [], // Backlog items don't have comments directly
+      attachments: [], // Backlog items don't have attachments directly
+    };
+    setSelectedTask(taskFromBacklog);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleTaskSubmit = (data: Partial<Task>) => {
+    if (selectedTask) {
+      updateTaskMutation.mutate({ taskId: selectedTask.id, data });
+    }
+    setIsTaskModalOpen(false);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      {/* Task Modal */}
+      <TaskModal 
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        task={selectedTask}
+        isCreating={false}
+        onSubmit={handleTaskSubmit}
+      />
+
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
@@ -248,6 +285,7 @@ const ProjectDetail: React.FC = () => {
             projectId={id!}
             onCreate={(data) => createBacklogMutation.mutate({ ...data, projectId: id! })}
             canCreate={canManageProject()}
+            onItemClick={handleItemClick}
           />
         )}
         
@@ -261,6 +299,7 @@ const ProjectDetail: React.FC = () => {
             onCreateSprint={(data) => createSprintMutation.mutate({ ...data, projectId: id! })}
             canManageSprint={canManageProject()}
             onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
+            onTaskClick={handleItemClick}
           />
         )}
 
@@ -295,7 +334,8 @@ const BacklogView: React.FC<{
   projectId: string;
   onCreate: (data: Omit<CreateBacklogDto, 'projectId'>) => void;
   canCreate: boolean;
-}> = ({ items, isLoading, onCreate, canCreate }) => {
+  onItemClick: (item: BacklogItem) => void;
+}> = ({ items, isLoading, onCreate, canCreate, onItemClick }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -364,8 +404,10 @@ const BacklogView: React.FC<{
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             key={item.id}
+            onClick={() => onItemClick(item)}
+            className="cursor-pointer"
           >
-            <Card className="py-4 px-6 flex items-center justify-between group">
+            <Card className="py-4 px-6 flex items-center justify-between group hover:border-primary transition-all">
               <div className="flex items-center gap-4">
                 <div className={`w-3 h-3 rounded-full shadow-sm ${
                   item.priority === 'high' ? 'bg-red-500' : 
@@ -408,7 +450,8 @@ const BoardView: React.FC<{
   onCreateSprint: (data: Omit<CreateSprintDto, 'projectId'>) => void;
   canManageSprint: boolean;
   onDeleteTask: (id: string) => void;
-}> = ({ sprint, tasks, isLoading, onDragEnd, onStartSprint, onCreateSprint, canManageSprint, onDeleteTask }) => {
+  onTaskClick: (task: Task) => void;
+}> = ({ sprint, tasks, isLoading, onDragEnd, onStartSprint, onCreateSprint, canManageSprint, onDeleteTask, onTaskClick }) => {
   const [isCreatingSprint, setIsCreatingSprint] = useState(false);
   const [sprintName, setSprintName] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -434,7 +477,7 @@ const BoardView: React.FC<{
           <Plus className="w-5 h-5" /> Create New Sprint
         </Button>
       ) : isCreatingSprint ? (
-        <Card className="max-w-md mx-auto text-left shadow-2xl border-none">
+        <Card className="max-w-md mx-auto text-left shadow-2xl border-none card-gradient">
           <h4 className="text-xl font-bold mb-6">Sprint Configuration</h4>
           <form onSubmit={handleCreateSprint} className="space-y-5">
             <Input 
@@ -467,10 +510,10 @@ const BoardView: React.FC<{
     done: tasks.filter(t => t.status === 'done'),
   };
 
-  const columnTitles: Record<string, string> = {
+  const columnTitles: Record<Task['status'], string> = {
     todo: 'To Do',
     in_progress: 'In Progress',
-    review: 'Review',
+    review: 'In Review',
     done: 'Done'
   };
 
@@ -496,76 +539,74 @@ const BoardView: React.FC<{
         </div>
       </div>
 
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide min-h-[600px]">
-          {(Object.keys(columns) as Array<keyof typeof columns>).map(colId => (
-            <div key={colId} className="flex flex-col bg-slate-100/50 rounded-2xl p-4 min-w-[300px] border border-slate-200/50">
-              <div className="flex items-center justify-between mb-4 px-2">
-                <h4 className="font-bold text-slate-700 flex items-center gap-2">
-                  {columnTitles[colId]}
-                  <span className="bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full text-[10px] font-black">
-                    {columns[colId].length}
-                  </span>
-                </h4>
-              </div>
-              
-              <Droppable droppableId={colId}>
+      <div className="overflow-x-auto pb-4">
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="grid grid-cols-4 gap-6 min-w-[1200px]">
+            {(Object.keys(columns) as Array<Task['status']>).map(columnId => (
+              <Droppable key={columnId} droppableId={columnId}>
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`flex-1 space-y-4 transition-all duration-200 rounded-xl p-1 ${
-                      snapshot.isDraggingOver ? "bg-primary/5 ring-2 ring-primary/20 ring-inset" : ""
-                    }`}
+                    className={`p-4 rounded-2xl transition-colors duration-300 ${snapshot.isDraggingOver ? 'bg-primary/5' : 'bg-slate-50/50'}`}
                   >
-                    {columns[colId].map((task, index) => (
-                      <Draggable key={task.id} draggableId={task.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={`
-                              bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all group
-                              ${snapshot.isDragging ? "rotate-3 shadow-2xl ring-2 ring-primary z-50 scale-105" : ""}
-                            `}
-                          >
-                            <div className="flex justify-between items-start mb-3 gap-3">
-                              <h5 className="font-bold text-slate-800 leading-tight group-hover:text-primary transition-colors">{task.title}</h5>
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => onDeleteTask(task.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
-                                  <Trash2 className="w-3.5 h-3.5" />
+                    <div className="flex items-center justify-between px-2 mb-4">
+                      <h4 className="text-lg font-black text-slate-700 flex items-center gap-2">
+                        {columnTitles[columnId]}
+                        <span className="text-sm font-bold text-slate-400 bg-slate-200/80 px-2.5 py-1 rounded-lg">
+                          {columns[columnId].length}
+                        </span>
+                      </h4>
+                    </div>
+                    <div className="space-y-4 min-h-[300px]">
+                      {columns[columnId].map((task, index) => (
+                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              onClick={() => onTaskClick(task)}
+                              className={`bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all group cursor-pointer ${snapshot.isDragging ? "rotate-3 shadow-2xl ring-2 ring-primary z-50 scale-105" : ""}`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <span className={`px-2 py-1 text-[10px] font-black rounded-md uppercase ${
+                                  {
+                                    high: 'bg-red-100 text-red-700',
+                                    medium: 'bg-amber-100 text-amber-700',
+                                    low: 'bg-emerald-100 text-emerald-700',
+                                  }[task.priority]
+                                }`}>
+                                  {task.priority}
+                                </span>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}
+                                  className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-100 hover:text-red-600 rounded-lg transition-all"
+                                >
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
-                            </div>
-                            
-                            <div className="flex items-center justify-between mt-4">
-                               <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                                task.priority === 'high' ? 'bg-red-100 text-red-600' : 
-                                task.priority === 'medium' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
-                              }`}>
-                                {task.priority}
-                              </div>
-                              {task.assignee && (
-                                <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 rounded-full bg-primary/10 text-primary border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-black" title={task.assignee.name}>
+                              <p className="font-bold text-slate-800 mt-3 mb-4 group-hover:text-primary transition-colors">{task.title}</p>
+                              <div className="flex items-center justify-end">
+                                {task.assignee && (
+                                  <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-[10px] border-2 border-white shadow-sm" title={task.assignee.name}>
                                     {task.assignee.name.split(' ').map(n => n[0]).join('')}
                                   </div>
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
                   </div>
                 )}
               </Droppable>
-            </div>
-          ))}
-        </div>
-      </DragDropContext>
+            ))}
+          </div>
+        </DragDropContext>
+      </div>
     </div>
   );
 };

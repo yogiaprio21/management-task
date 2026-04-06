@@ -59,10 +59,37 @@ export interface Task {
   sprintId?: string;
   backlogItemId?: string;
   assignee?: User;
+  creator?: User;
+  comments: Comment[];
+  attachments: Attachment[];
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string;
   version?: number;
+}
+
+export interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  user: User;
+}
+
+export interface Attachment {
+  id: string;
+  filename: string;
+  url: string;
+  mimetype: string;
+  createdAt: string;
+  user: User;
+}
+
+export interface AuditLog {
+  id: string;
+  action: string;
+  details: string;
+  createdAt: string;
+  user: User;
 }
 
 export interface Report {

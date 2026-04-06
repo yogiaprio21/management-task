@@ -30,22 +30,7 @@ export async function runSeed(app: INestApplicationContext) {
       tablesExist = true;
       console.log('✅ Database tables detected.');
     } catch (err) {
-      console.log(`⏳ Database tables not ready yet. Error: ${err.message}.`);
-      
-      // Try to force synchronize if tables are missing
-      if (err.message.includes('does not exist')) {
-        console.log('🛠️ Attempting to force create tables (synchronize)...');
-        try {
-          await dataSource.synchronize();
-          console.log('✅ Tables created successfully via synchronize!');
-          tablesExist = true;
-          continue;
-        } catch (syncErr) {
-          console.error('❌ Failed to synchronize tables:', syncErr.message);
-        }
-      }
-
-      console.log(`Retrying in 5s... (${retries} attempts left)`);
+      console.log(`⏳ Database tables not ready yet. Error: ${err.message}. Retrying in 5s... (${retries} attempts left)`);
       retries--;
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
@@ -109,7 +94,7 @@ export async function runSeed(app: INestApplicationContext) {
 
   // 2. Create Project
   console.log('Creating Project...');
-  let project = (await projectsService.findAll(adminUser))[0];
+  let project = (await projectsService.findAll(managerUser))[0];
   if (!project) {
     project = await projectsService.create({
       name: 'E-Commerce Platform Redesign',
@@ -120,7 +105,7 @@ export async function runSeed(app: INestApplicationContext) {
 
   // 3. Create Backlog Items
   console.log('Creating Backlog Items...');
-  const existingBacklog = await backlogService.findAllByProject(project.id);
+  const existingBacklog = await backlogService.findAllByProject(project.id, managerUser);
   if (existingBacklog.length === 0) {
     const items = [
       { title: 'User Authentication', priority: 'high', status: 'todo' },
@@ -143,7 +128,7 @@ export async function runSeed(app: INestApplicationContext) {
 
   // 4. Create Sprint
   console.log('Creating Sprint...');
-  let sprint = (await sprintsService.findAllByProject(project.id))[0];
+  let sprint = (await sprintsService.findAllByProject(project.id, managerUser))[0];
   if (!sprint) {
     const startDate = new Date();
     const endDate = new Date();
@@ -161,9 +146,9 @@ export async function runSeed(app: INestApplicationContext) {
 
   // 5. Create Tasks
   console.log('Creating Tasks...');
-  const existingTasks = await tasksService.findAll(sprint.id);
+  const existingTasks = await tasksService.findAll(managerUser, sprint.id);
   if (existingTasks.length === 0) {
-    const backlogItems = await backlogService.findAllByProject(project.id);
+    const backlogItems = await backlogService.findAllByProject(project.id, managerUser);
     
     // Create tasks for the first backlog item
     if (backlogItems.length > 0) {

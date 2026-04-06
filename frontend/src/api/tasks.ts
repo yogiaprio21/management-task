@@ -25,3 +25,18 @@ export const deleteTask = async (id: string) => {
   const response = await api.delete(`/tasks/${id}`);
   return response.data;
 };
+
+export const addComment = async (taskId: string, content: string) => {
+  const response = await api.post(`/tasks/${taskId}/comments`, { content });
+  return response.data;
+};
+
+export const addAttachment = async (taskId: string, data: any) => {
+  const response = await api.post(`/tasks/${taskId}/attachments`, data);
+  return response.data;
+};
+
+export const getTaskHistory = async (taskId: string) => {
+  const response = await api.get(`/tasks/${taskId}/history`);
+  return response.data;
+};
