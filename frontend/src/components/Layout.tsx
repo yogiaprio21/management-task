@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getProjects } from '../api/projects';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { LayoutDashboard, FolderKanban, CheckSquare, LogOut, Menu, X, Users, Moon, Sun, KanbanSquare, LayoutList, BarChart3, Activity, ScrollText, Webhook } from 'lucide-react';
@@ -15,6 +17,14 @@ const Layout: React.FC = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const { data: projects } = useQuery({
+    queryKey: ['projects'],
+    queryFn: getProjects,
+    enabled: !!user,
+  });
+
+  const hasProjects = projects && projects.length > 0;
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -23,11 +33,16 @@ const Layout: React.FC = () => {
   const navItems = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Projects', href: '/projects', icon: FolderKanban },
-    { name: 'Sprints', href: '/sprints', icon: KanbanSquare },
-    { name: 'Backlog', href: '/backlog', icon: LayoutList },
-    { name: 'Reports', href: '/reports', icon: BarChart3 },
-    { name: 'My Tasks', href: '/tasks', icon: CheckSquare },
   ];
+
+  if (hasProjects) {
+    navItems.push(
+      { name: 'Sprints', href: '/sprints', icon: KanbanSquare },
+      { name: 'Backlog', href: '/backlog', icon: LayoutList },
+      { name: 'Reports', href: '/reports', icon: BarChart3 },
+      { name: 'My Tasks', href: '/tasks', icon: CheckSquare }
+    );
+  }
 
   if (user?.role === 'admin') {
     navItems.push(
