@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import { getProjects, createProject } from '../api/projects';
 import { getTasks } from '../api/tasks';
-import { CheckCircle2, Clock, PlayCircle, Plus, X, Layout, ArrowRight, Loader2, BarChart2 } from 'lucide-react';
+import { getSprints } from '../api/sprints';
+import { CheckCircle2, Clock, PlayCircle, Plus, X, Layout, ArrowRight, Loader2, CheckSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { Button } from '../ui/Button';
@@ -27,8 +28,18 @@ const Dashboard: React.FC = () => {
   });
 
   const pendingTasks = tasks?.filter(t => t.status !== 'done').length || 0;
-  // Approximation for sprints since we don't fetch all sprints globally
-  const activeSprints = projects?.length ? Math.max(1, Math.floor(projects.length / 2)) : 0;
+  
+  const sprintQueries = useQueries({
+    queries: (projects || []).map((project) => ({
+      queryKey: ['sprints', project.id],
+      queryFn: () => getSprints(project.id),
+      enabled: !!project.id,
+    })),
+  });
+
+  const allSprints = sprintQueries.flatMap(q => q.data || []);
+  const activeSprints = allSprints.filter(s => s.status === 'active').length;
+  const completedSprints = allSprints.filter(s => s.status === 'completed').length;
 
 
   const createMutation = useMutation({
@@ -114,7 +125,7 @@ const Dashboard: React.FC = () => {
               { label: 'Active Projects', value: projects?.length || 0, icon: PlayCircle, color: 'text-blue-600', bg: 'bg-blue-50' },
               { label: 'Pending Tasks', value: pendingTasks, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
               { label: 'Active Sprints', value: activeSprints, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-              { label: 'Efficiency', value: projects?.length ? '98%' : '0%', icon: BarChart2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { label: 'Completed Sprints', value: completedSprints, icon: CheckSquare, color: 'text-indigo-600', bg: 'bg-indigo-50' },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}

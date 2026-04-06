@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProjects } from '../api/projects';
 import { getBacklogItems, createBacklogItem, updateBacklogItem, deleteBacklogItem } from '../api/backlog';
-import { LayoutList, Loader2, Plus, Edit2, Trash2, X } from 'lucide-react';
+import { getSprints } from '../api/sprints';
+import { createTask } from '../api/tasks';
+import { LayoutList, Loader2, Plus, Edit2, Trash2, X, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
+import { toast } from 'react-hot-toast';
 
 const ProductBacklog: React.FC = () => {
   const queryClient = useQueryClient();
@@ -36,12 +39,21 @@ const ProductBacklog: React.FC = () => {
     enabled: !!selectedProjectId,
   });
 
+  const { data: sprints } = useQuery({
+    queryKey: ['sprints', selectedProjectId],
+    queryFn: () => getSprints(selectedProjectId),
+    enabled: !!selectedProjectId,
+  });
+
+  const activeSprint = sprints?.find(s => s.status === 'active');
+
   const createBacklogMutation = useMutation({
     mutationFn: createBacklogItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backlog', selectedProjectId] });
       setIsCreating(false);
       setTitle('');
+      toast.success('Backlog item created');
     }
   });
 
@@ -50,6 +62,7 @@ const ProductBacklog: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backlog', selectedProjectId] });
       setEditingItem(null);
+      toast.success('Backlog item updated');
     }
   });
 
@@ -57,6 +70,32 @@ const ProductBacklog: React.FC = () => {
     mutationFn: deleteBacklogItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backlog', selectedProjectId] });
+      toast.success('Backlog item deleted');
+    }
+  });
+
+  const moveToSprintMutation = useMutation({
+    mutationFn: async (item: { id: string; title: string; description: string; priority: 'low' | 'medium' | 'high' }) => {
+      if (!activeSprint) throw new Error('No active sprint found');
+      // Create a task in the active sprint from this backlog item
+      await createTask({
+        title: item.title,
+        description: item.description || '',
+        priority: item.priority,
+        sprintId: activeSprint.id,
+        backlogItemId: item.id,
+      });
+      // Delete the backlog item after successfully moving it
+      await deleteBacklogItem(item.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backlog', selectedProjectId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['sprints', selectedProjectId] });
+      toast.success('Item moved to active sprint!');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Failed to move item to sprint');
     }
   });
 
@@ -83,7 +122,7 @@ const ProductBacklog: React.FC = () => {
           </h1>
           <p className="text-slate-500 max-w-2xl text-lg font-medium">Manage and prioritize upcoming features and tasks.</p>
         </div>
-        <div>
+        <div className="flex items-center gap-3">
           <select 
             value={selectedProjectId}
             onChange={e => setSelectedProjectId(e.target.value)}
@@ -95,6 +134,23 @@ const ProductBacklog: React.FC = () => {
           </select>
         </div>
       </div>
+
+      {/* Active Sprint Badge */}
+      {activeSprint && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+          <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
+          <span className="text-sm font-bold text-emerald-700">Active Sprint: {activeSprint.name}</span>
+          <span className="text-xs text-emerald-500 font-medium">
+            ({new Date(activeSprint.startDate).toLocaleDateString()} — {new Date(activeSprint.endDate).toLocaleDateString()})
+          </span>
+        </motion.div>
+      )}
+
+      {!activeSprint && selectedProjectId && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <span className="text-sm font-bold text-amber-700">⚠ No active sprint for this project. Create and activate a sprint in Project Details to enable "Move to Sprint".</span>
+        </div>
+      )}
 
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div className="flex justify-between items-center mb-6">
@@ -163,23 +219,55 @@ const ProductBacklog: React.FC = () => {
               ) : (
                 <Card 
                   key={item.id} 
-                  className="py-4 px-6 flex items-center justify-between hover:border-primary hover:shadow-md cursor-pointer transition-all"
-                  onClick={() => {
-                    setEditingItem(item.id);
-                    setEditTitle(item.title);
-                    setEditPriority(item.priority);
-                    setEditStatus(item.status);
-                  }}
+                  className="py-4 px-6 flex items-center justify-between hover:border-primary hover:shadow-md transition-all"
                 >
-                  <div className="flex items-center gap-4">
+                  <div 
+                    className="flex items-center gap-4 flex-1 cursor-pointer"
+                    onClick={() => {
+                      setEditingItem(item.id);
+                      setEditTitle(item.title);
+                      setEditPriority(item.priority);
+                      setEditStatus(item.status);
+                    }}
+                  >
                     <div className={`w-3 h-3 rounded-full ${
                       item.priority === 'high' ? 'bg-red-500' : item.priority === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
                     }`} />
                     <span className="font-bold text-slate-700 block">{item.title}</span>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                      <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{item.status.replace('_', ' ')}</span>
-                     <Edit2 className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors" />
+                     {activeSprint && (
+                       <button
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           moveToSprintMutation.mutate({
+                             id: item.id,
+                             title: item.title,
+                             description: item.description || '',
+                             priority: item.priority,
+                           });
+                         }}
+                         disabled={moveToSprintMutation.isPending}
+                         title={`Move to sprint: ${activeSprint.name}`}
+                         className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold transition-all hover:scale-105 disabled:opacity-50"
+                       >
+                         <Zap className="w-3.5 h-3.5" />
+                         To Sprint
+                       </button>
+                     )}
+                     <button
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         setEditingItem(item.id);
+                         setEditTitle(item.title);
+                         setEditPriority(item.priority);
+                         setEditStatus(item.status);
+                       }}
+                       className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+                     >
+                       <Edit2 className="w-4 h-4 text-slate-300 hover:text-primary transition-colors" />
+                     </button>
                   </div>
                 </Card>
               )
