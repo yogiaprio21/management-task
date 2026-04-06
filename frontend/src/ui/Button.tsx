@@ -22,11 +22,11 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const variants = {
-    primary: 'bg-primary text-white hover:bg-blue-600 shadow-md hover:shadow-lg',
-    secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-    outline: 'border-2 border-primary text-primary hover:bg-primary/5',
-    ghost: 'hover:bg-gray-100 text-gray-600',
-    danger: 'bg-red-500 text-white hover:bg-red-600 shadow-md hover:shadow-lg',
+    primary: 'bg-gradient-to-r from-primary to-primary-hover text-white shadow-md hover:shadow-glow hover:-translate-y-0.5 border border-white/10',
+    secondary: 'bg-surface-glass dark:bg-surface-darkGlass backdrop-blur-md text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-subtle hover:shadow-md',
+    outline: 'border-2 border-primary/50 text-primary hover:bg-primary-glass hover:border-primary',
+    ghost: 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
+    danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:-translate-y-0.5',
   };
 
   const sizes = {
@@ -38,7 +38,7 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none',
+        'inline-flex items-center justify-center rounded-xl font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:pointer-events-none',
         variants[variant],
         sizes[size],
         className

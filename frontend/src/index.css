@@ -4,21 +4,44 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    @apply bg-slate-50 text-slate-900 font-sans antialiased overflow-x-hidden transition-colors duration-300;
+    /* Soft mesh gradient pattern for light mode */
+    background-image: 
+      radial-gradient(at 40% 20%, hsla(220, 100%, 97%, 1) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(189, 100%, 96%, 1) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(240, 100%, 98%, 1) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+  
+  .dark body {
+    @apply bg-surface-dark text-slate-100;
+    /* Deep space mesh gradient pattern for dark mode */
+    background-image: 
+      radial-gradient(at 40% 20%, hsla(220, 40%, 15%, 1) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(189, 40%, 12%, 1) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(240, 40%, 10%, 1) 0px, transparent 50%);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
   }
 }
 
 @layer components {
   .section-title {
-    @apply text-3xl font-black text-slate-900 tracking-tight;
+    @apply text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight;
   }
   
   .section-subtitle {
-    @apply text-slate-500 text-lg font-medium;
+    @apply text-slate-500 dark:text-slate-400 text-base md:text-lg font-medium;
   }
   
   .card-gradient {
-    @apply bg-gradient-to-br from-white to-slate-50/50 dark:from-slate-800 dark:to-slate-900/50 border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all;
+    @apply bg-surface-glass dark:bg-surface-darkGlass backdrop-blur-xl border border-white/40 dark:border-white/5 shadow-glass dark:shadow-glass-dark hover:shadow-lg transition-all duration-300;
+  }
+  
+  .glass-panel {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-white/50 dark:border-white/10;
   }
 }
 

@@ -6,6 +6,7 @@ import { LayoutDashboard, FolderKanban, CheckSquare, LogOut, Menu, X, Users, Moo
 import clsx from 'clsx';
 import Logo from './Logo';
 import NotificationBell from './notifications/NotificationBell';
+import { motion } from 'framer-motion';
 
 const Layout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -38,9 +39,9 @@ const Layout: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div className="flex flex-col md:flex-row h-screen bg-transparent transition-colors duration-300 overflow-hidden text-slate-800 dark:text-slate-100">
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow-sm">
+      <div className="md:hidden flex items-center justify-between p-4 glass-panel border-b-0 shadow-sm z-50">
         <Link to="/" className="flex items-center gap-2">
           <Logo size={28} />
         </Link>
@@ -75,13 +76,19 @@ const Layout: React.FC = () => {
                 to={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className={clsx(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+                  'flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all duration-300 font-bold relative group overflow-hidden',
                   isActive
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-primary font-medium'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                    ? 'bg-gradient-to-r from-primary to-primary-hover text-white shadow-md shadow-primary/30'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white hover:-translate-y-0.5'
                 )}
               >
-                <item.icon className="w-5 h-5" />
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabMobile"
+                    className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent pointer-events-none"
+                  />
+                )}
+                <item.icon className={clsx("w-5 h-5 transition-transform duration-300 group-hover:scale-110", isActive ? "text-white" : "text-slate-400 group-hover:text-primary")} />
                 {item.name}
               </Link>
             );
@@ -108,8 +115,8 @@ const Layout: React.FC = () => {
       </div>
 
       {/* Sidebar - Desktop */}
-      <div className="hidden md:flex w-64 bg-white dark:bg-gray-800 shadow-lg flex-col transition-colors duration-200">
-        <div className="p-6 border-b dark:border-gray-700">
+      <div className="hidden md:flex w-72 glass-panel m-4 rounded-3xl flex-col transition-all duration-300 shadow-glass border-white/40 dark:border-white/10 z-20">
+        <div className="p-8 border-b border-slate-200/50 dark:border-slate-700/50 flex justify-center">
           <Link to="/" className="flex items-center gap-2">
             <Logo size={32} />
           </Link>
@@ -123,13 +130,19 @@ const Layout: React.FC = () => {
                 key={item.name}
                 to={item.href}
                 className={clsx(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+                  'flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all duration-300 font-bold group relative overflow-hidden',
                   isActive
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-primary font-medium'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                    ? 'bg-gradient-to-r from-primary to-primary-hover text-white shadow-glow scale-[1.02]'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white hover:scale-[1.01]'
                 )}
               >
-                <item.icon className="w-5 h-5" />
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent pointer-events-none"
+                  />
+                )}
+                <item.icon className={clsx("w-5 h-5 transition-transform duration-300 group-hover:scale-110", isActive ? "text-white" : "text-slate-400 group-hover:text-primary")} />
                 {item.name}
               </Link>
             );
@@ -170,8 +183,8 @@ const Layout: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-        <div className="p-4 md:p-8">
+      <div className="flex-1 overflow-x-hidden overflow-y-auto bg-transparent relative z-10 scroll-smooth">
+        <div className="p-4 md:p-8 md:pt-10 max-w-7xl mx-auto">
           <Outlet />
         </div>
       </div>

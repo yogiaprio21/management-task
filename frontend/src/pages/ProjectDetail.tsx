@@ -19,8 +19,7 @@ import {
   Users,
   UserPlus,
   Mail,
-  Loader2,
-  ExternalLink
+  Loader2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
@@ -37,8 +36,7 @@ import type {
   Report,
   User,
   Sprint,
-  Task,
-  UpdateTaskDto
+  Task
 } from '../types';
 
 const ProjectDetail: React.FC = () => {
@@ -196,14 +194,14 @@ const ProjectDetail: React.FC = () => {
     { id: 'members', label: 'Members', icon: Users },
   ] as const;
 
-  const handleBacklogItemClick = (item: BacklogItem) => {
+  const handleItemClick = (item: BacklogItem | Task) => {
     // Convert BacklogItem to a Task-like object for the modal
-    const taskFromBacklog: Task = {
-      ...item,
-      comments: [], // Backlog items don't have comments directly
-      attachments: [], // Backlog items don't have attachments directly
+    const taskFromItem: Task = {
+      ...(item as unknown as Task),
+      comments: 'comments' in item ? item.comments : [],
+      attachments: 'attachments' in item ? item.attachments : [],
     };
-    setSelectedTask(taskFromBacklog);
+    setSelectedTask(taskFromItem);
     setIsTaskModalOpen(true);
   };
 
