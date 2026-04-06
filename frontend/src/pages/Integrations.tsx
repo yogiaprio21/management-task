@@ -6,6 +6,7 @@ import { Plus, Webhook as WebhookIcon, Trash2, Loader2 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { toast } from 'react-hot-toast';
 
 const Integrations: React.FC = () => {
   const queryClient = useQueryClient();
@@ -31,12 +32,18 @@ const Integrations: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['webhooks', selectedProjectId] });
       setUrl('');
-    }
+      toast.success('Webhook created successfully');
+    },
+    onError: () => toast.error('Failed to create webhook'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteWebhook,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['webhooks', selectedProjectId] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['webhooks', selectedProjectId] });
+      toast.success('Webhook deleted');
+    },
+    onError: () => toast.error('Failed to delete webhook'),
   });
 
   const handleCreate = (e: React.FormEvent) => {

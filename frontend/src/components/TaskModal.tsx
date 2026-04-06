@@ -43,7 +43,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
       queryClient.invalidateQueries({ queryKey: ['task', task?.id] });
       setCommentText('');
       toast.success('Comment added');
-    }
+    },
+    onError: () => toast.error('Failed to add comment'),
   });
 
   const initialFormData = useMemo(() => ({

@@ -26,8 +26,9 @@ const Login: React.FC = () => {
       await login(data.access_token);
       toast.success('Welcome back!');
       navigate('/');
-    } catch {
-      // Error handled globally
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Invalid email or password';
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

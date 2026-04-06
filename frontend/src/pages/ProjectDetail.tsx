@@ -86,7 +86,8 @@ const ProjectDetail: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backlog', id] });
       toast.success('Backlog item added');
-    }
+    },
+    onError: () => toast.error('Failed to add backlog item'),
   });
 
   const createSprintMutation = useMutation({
@@ -94,7 +95,8 @@ const ProjectDetail: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sprints', id] });
       toast.success('Sprint created');
-    }
+    },
+    onError: () => toast.error('Failed to create sprint'),
   });
 
   const createReportMutation = useMutation({
@@ -102,7 +104,8 @@ const ProjectDetail: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports', id] });
       toast.success('Report created');
-    }
+    },
+    onError: () => toast.error('Failed to create report'),
   });
 
   const updateTaskMutation = useMutation({
@@ -110,7 +113,9 @@ const ProjectDetail: React.FC = () => {
       updateTask(taskId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', activeSprint?.id] });
-    }
+      toast.success('Task updated');
+    },
+    onError: () => toast.error('Failed to update task'),
   });
 
   const deleteTaskMutation = useMutation({
@@ -118,7 +123,8 @@ const ProjectDetail: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', activeSprint?.id] });
       toast.success('Task deleted');
-    }
+    },
+    onError: () => toast.error('Failed to delete task'),
   });
 
   const addMemberMutation = useMutation({
@@ -141,7 +147,8 @@ const ProjectDetail: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
       toast.success('Member removed');
-    }
+    },
+    onError: () => toast.error('Failed to remove member'),
   });
 
   // --- Drag and Drop ---

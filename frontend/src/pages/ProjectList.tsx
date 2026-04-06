@@ -38,6 +38,9 @@ const ProjectList: React.FC = () => {
       setNewProjectDesc('');
       toast.success('Project created successfully!');
     },
+    onError: () => {
+      toast.error('Failed to create project');
+    }
   });
 
   const deleteMutation = useMutation({
@@ -51,6 +54,7 @@ const ProjectList: React.FC = () => {
     },
     onError: () => {
        setDeleteConfirmOpen(null);
+       toast.error('Failed to delete project');
     }
   });
 

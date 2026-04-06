@@ -53,8 +53,9 @@ const ProductBacklog: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['backlog', selectedProjectId] });
       setIsCreating(false);
       setTitle('');
-      toast.success('Backlog item created');
-    }
+      toast.success('Backlog item created successfully');
+    },
+    onError: () => toast.error('Failed to create backlog item'),
   });
 
   const updateBacklogMutation = useMutation({
@@ -62,16 +63,18 @@ const ProductBacklog: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backlog', selectedProjectId] });
       setEditingItem(null);
-      toast.success('Backlog item updated');
-    }
+      toast.success('Backlog item updated successfully');
+    },
+    onError: () => toast.error('Failed to update backlog item'),
   });
 
   const deleteBacklogMutation = useMutation({
     mutationFn: deleteBacklogItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backlog', selectedProjectId] });
-      toast.success('Backlog item deleted');
-    }
+      toast.success('Backlog item deleted successfully');
+    },
+    onError: () => toast.error('Failed to delete backlog item'),
   });
 
   const moveToSprintMutation = useMutation({

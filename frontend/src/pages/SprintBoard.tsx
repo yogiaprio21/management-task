@@ -9,6 +9,7 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-p
 import { Card } from '../ui/Card';
 import type { Task, UpdateTaskDto } from '../types';
 import TaskModal from '../components/TaskModal';
+import { toast } from 'react-hot-toast';
 
 const SprintBoard: React.FC = () => {
   const queryClient = useQueryClient();
@@ -43,7 +44,11 @@ const SprintBoard: React.FC = () => {
 
   const updateTaskMutation = useMutation({
     mutationFn: ({ taskId, data }: { taskId: string; data: Partial<Task> }) => updateTask(taskId, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks', activeSprint?.id] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', activeSprint?.id] });
+      toast.success('Task updated successfully');
+    },
+    onError: () => toast.error('Failed to update task'),
   });
 
   const onDragEnd = (result: DropResult) => {

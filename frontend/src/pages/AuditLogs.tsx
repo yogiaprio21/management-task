@@ -3,12 +3,19 @@ import { useQuery } from '@tanstack/react-query';
 import { getAuditLogs } from '../api/audit';
 import { ScrollText, Loader2, Activity } from 'lucide-react';
 import { Card } from '../ui/Card';
+import { toast } from 'react-hot-toast';
 
 const AuditLogs: React.FC = () => {
-  const { data: logs, isLoading } = useQuery({
+  const { data: logs, isLoading, error } = useQuery({
     queryKey: ['audit'],
     queryFn: () => getAuditLogs(),
   });
+
+  React.useEffect(() => {
+    if (error) {
+      toast.error('Failed to load audit logs');
+    }
+  }, [error]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">

@@ -10,8 +10,10 @@ import { toast } from 'react-hot-toast';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState('');
@@ -27,7 +29,8 @@ const Dashboard: React.FC = () => {
     queryFn: () => getTasks(''),
   });
 
-  const pendingTasks = tasks?.filter(t => t.status !== 'done').length || 0;
+  // Filter hanya task yang di-assign ke user yang login dan belum selesai
+  const pendingTasks = tasks?.filter(t => t.status !== 'done' && t.assigneeId === user?.id).length || 0;
   
   const sprintQueries = useQueries({
     queries: (projects || []).map((project) => ({
