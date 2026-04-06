@@ -1,0 +1,171 @@
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getProjects } from '../api/projects';
+import { getSprints } from '../api/sprints';
+import { getTasks, updateTask } from '../api/tasks';
+
+import { KanbanSquare, Loader2, Calendar } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
+import { Card } from '../ui/Card';
+import type { Task } from '../types';
+
+const SprintBoard: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+
+  const { data: projects, isLoading: projectsLoading } = useQuery({
+    queryKey: ['projects'],
+    queryFn: getProjects,
+  });
+
+  useEffect(() => {
+    if (projects && projects.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId]);
+
+  const { data: sprints } = useQuery({
+    queryKey: ['sprints', selectedProjectId],
+    queryFn: () => getSprints(selectedProjectId),
+    enabled: !!selectedProjectId,
+  });
+
+  const activeSprint = sprints?.find(s => s.status === 'active') || sprints?.[0];
+
+  const { data: tasks } = useQuery({
+    queryKey: ['tasks', activeSprint?.id],
+    queryFn: () => getTasks(activeSprint!.id),
+    enabled: !!activeSprint?.id,
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: ({ taskId, data }: { taskId: string; data: Partial<Task> }) => updateTask(taskId, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks', activeSprint?.id] })
+  });
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const { draggableId, destination } = result;
+    
+    if (result.source.droppableId !== destination.droppableId) {
+       updateTaskMutation.mutate({ 
+        taskId: draggableId, 
+        data: { status: destination.droppableId as Task['status'] }
+      });
+    }
+  };
+
+  const columns: Record<Task['status'], Task[]> = {
+    todo: tasks?.filter(t => t.status === 'todo') || [],
+    in_progress: tasks?.filter(t => t.status === 'in_progress') || [],
+    review: tasks?.filter(t => t.status === 'review') || [],
+    done: tasks?.filter(t => t.status === 'done') || [],
+  };
+
+  const columnTitles: Record<Task['status'], string> = {
+    todo: 'To Do',
+    in_progress: 'In Progress',
+    review: 'In Review',
+    done: 'Done'
+  };
+
+  if (projectsLoading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-extrabold text-slate-900 flex items-center gap-3">
+            <KanbanSquare className="w-10 h-10 text-primary" /> Active Sprint Board
+          </h1>
+          <p className="text-slate-500 max-w-2xl text-lg font-medium">Manage and track your active sprints across all projects.</p>
+        </div>
+        <div>
+          <select 
+            value={selectedProjectId}
+            onChange={e => setSelectedProjectId(e.target.value)}
+            className="px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-bold shadow-sm"
+          >
+            {projects?.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {!activeSprint && selectedProjectId && (
+        <Card className="text-center p-12 border-dashed bg-slate-50">
+          <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold">No Active Sprint</h3>
+          <p className="text-slate-500">Go to Project Details to create and start a sprint.</p>
+        </Card>
+      )}
+
+      {activeSprint && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+            <div>
+              <h3 className="text-2xl font-bold text-slate-900">{activeSprint.name}</h3>
+              <p className="text-slate-500 font-medium">
+                {new Date(activeSprint.startDate).toLocaleDateString()} — {new Date(activeSprint.endDate).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /> Active
+            </div>
+          </div>
+
+          <div className="overflow-x-auto pb-4">
+            <DragDropContext onDragEnd={onDragEnd}>
+              <div className="grid grid-cols-4 gap-6 min-w-[1200px]">
+                 {(Object.keys(columns) as Array<Task['status']>).map(columnId => (
+                  <Droppable key={columnId} droppableId={columnId}>
+                     {(provided, snapshot) => (
+                       <div
+                         ref={provided.innerRef}
+                         {...provided.droppableProps}
+                         className={`p-4 rounded-2xl transition-colors duration-300 ${snapshot.isDraggingOver ? 'bg-primary/5' : 'bg-slate-50'}`}
+                       >
+                         <h4 className="text-lg font-black text-slate-700 flex items-center gap-2 mb-4">
+                           {columnTitles[columnId]}
+                           <span className="text-sm font-bold text-slate-400 bg-slate-200/80 px-2.5 py-1 rounded-lg">
+                             {columns[columnId].length}
+                           </span>
+                         </h4>
+                         <div className="space-y-4 min-h-[300px]">
+                            {columns[columnId].map((task, index) => (
+                              <Draggable key={task.id} draggableId={task.id} index={index}>
+                                {(provided, snapshot) => (
+                                   <div
+                                     ref={provided.innerRef}
+                                     {...provided.draggableProps}
+                                     {...provided.dragHandleProps}
+                                     className={`bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all ${snapshot.isDragging ? "rotate-3 shadow-2xl ring-2 ring-primary scale-105 z-50" : ""}`}
+                                   >
+                                      <span className={`px-2 py-1 text-[10px] font-black rounded-md uppercase ${
+                                        task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                        task.priority === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                                      }`}>
+                                        {task.priority}
+                                      </span>
+                                      <p className="font-bold text-slate-800 mt-3 mb-4">{task.title}</p>
+                                   </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                         </div>
+                       </div>
+                     )}
+                  </Droppable>
+                 ))}
+              </div>
+            </DragDropContext>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SprintBoard;

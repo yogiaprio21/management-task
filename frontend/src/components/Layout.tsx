@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { LayoutDashboard, FolderKanban, CheckSquare, LogOut, Menu, X, Users, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, CheckSquare, LogOut, Menu, X, Users, Moon, Sun, KanbanSquare, LayoutList, BarChart3, Activity, ScrollText, Webhook } from 'lucide-react';
 import clsx from 'clsx';
 import Logo from './Logo';
+import NotificationBell from './notifications/NotificationBell';
 
 const Layout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -21,11 +22,19 @@ const Layout: React.FC = () => {
   const navItems = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Projects', href: '/projects', icon: FolderKanban },
+    { name: 'Sprints', href: '/sprints', icon: KanbanSquare },
+    { name: 'Backlog', href: '/backlog', icon: LayoutList },
+    { name: 'Reports', href: '/reports', icon: BarChart3 },
     { name: 'My Tasks', href: '/tasks', icon: CheckSquare },
   ];
 
   if (user?.role === 'admin') {
-    navItems.push({ name: 'Users', href: '/users', icon: Users });
+    navItems.push(
+      { name: 'Users', href: '/users', icon: Users },
+      { name: 'Audit Logs', href: '/admin/audit', icon: ScrollText },
+      { name: 'Health', href: '/admin/health', icon: Activity },
+      { name: 'Integrations', href: '/settings/integrations', icon: Webhook }
+    );
   }
 
   return (
@@ -36,6 +45,7 @@ const Layout: React.FC = () => {
           <Logo size={28} />
         </Link>
         <div className="flex items-center gap-2">
+          <NotificationBell />
           <button
             onClick={toggleTheme}
             className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
@@ -127,6 +137,11 @@ const Layout: React.FC = () => {
         </nav>
 
         <div className="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          <div className="flex items-center gap-3 px-4 py-3 border-b dark:border-gray-700">
+             <NotificationBell />
+             <span className="text-gray-600 dark:text-gray-400 font-medium text-sm">Notifications</span>
+          </div>
+
           <button
             onClick={toggleTheme}
             className="w-full flex items-center gap-3 px-4 py-3 mb-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"

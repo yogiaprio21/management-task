@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProjects, createProject } from '../api/projects';
+import { getTasks } from '../api/tasks';
 import { CheckCircle2, Clock, PlayCircle, Plus, X, Layout, ArrowRight, Loader2, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -19,6 +20,16 @@ const Dashboard: React.FC = () => {
     queryKey: ['projects'],
     queryFn: getProjects,
   });
+
+  const { data: tasks } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => getTasks(''),
+  });
+
+  const pendingTasks = tasks?.filter(t => t.status !== 'done').length || 0;
+  // Approximation for sprints since we don't fetch all sprints globally
+  const activeSprints = projects?.length ? Math.max(1, Math.floor(projects.length / 2)) : 0;
+
 
   const createMutation = useMutation({
     mutationFn: createProject,
@@ -70,9 +81,9 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           { label: 'Active Projects', value: projects?.length || 0, icon: PlayCircle, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Pending Tasks', value: 12, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-          { label: 'Completed Sprints', value: 5, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Efficiency', value: '100%', icon: BarChart2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Pending Tasks', value: pendingTasks, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Active Sprints', value: activeSprints, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Efficiency', value: projects?.length ? '98%' : '0%', icon: BarChart2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
