@@ -41,7 +41,7 @@ import { AuditLog } from './audit/audit-log.entity';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => [{
         ttl: config.get('THROTTLE_TTL') || 60000,
-        limit: config.get('THROTTLE_LIMIT') || 10,
+        limit: config.get('THROTTLE_LIMIT') || 100,
       }],
     }),
 
