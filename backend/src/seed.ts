@@ -38,6 +38,15 @@ export async function runSeed(app: INestApplicationContext) {
     return;
   }
 
+  // --- AUTOMATIC SCHEMA SYNC ---
+  console.log('🔄 Synchronizing database schema (Auto-creating tables)...');
+  try {
+    await dataSource.synchronize();
+    console.log('✅ Database schema synchronized.');
+  } catch (error) {
+    console.log('⚠️  Could not synchronize schema, proceeding anyway...', error);
+  }
+
   // --- DATABASE SCHEMA PATCH (FORCED) ---
   console.log('🛠️  Checking database schema consistency...');
   try {
@@ -52,17 +61,32 @@ export async function runSeed(app: INestApplicationContext) {
 
   const isForceSeed = process.env.FORCE_SEED === 'true';
 
-  if (isForceSeed) {
-    console.log('🗑️  Cleaning database (Cascade truncate) due to FORCE_SEED...');
-    try {
-      await dataSource.query(`TRUNCATE TABLE "audit_logs", "notifications", "daily_reports", "comments", "attachments", "tasks", "backlog_items", "sprints", "projects", "users" RESTART IDENTITY CASCADE;`);
-      // Also ensure many-to-many junction tables are clean
-      await dataSource.query(`TRUNCATE TABLE "project_members" RESTART IDENTITY CASCADE;`).catch(() => {});
-      console.log('✅ Database cleaned via FORCE_SEED.');
-    } catch (error) {
-      console.log('⚠️  Could not clean database entirely, proceeding...', error);
+    if (isForceSeed) {
+      console.log('🗑️  Cleaning database (Robust truncate) due to FORCE_SEED...');
+      const tables = [
+        "audit_logs", 
+        "notifications", 
+        "daily_reports", 
+        "comments", 
+        "attachments", 
+        "tasks", 
+        "backlog_items", 
+        "sprints", 
+        "projects", 
+        "users",
+        "project_members"
+      ];
+
+      for (const table of tables) {
+        try {
+          await dataSource.query(`TRUNCATE TABLE "${table}" RESTART IDENTITY CASCADE;`);
+          console.log(`✅ Table "${table}" truncated.`);
+        } catch (error: any) {
+          console.log(`⚠️  Could not truncate table "${table}" (likely doesn't exist yet). Continuing...`);
+        }
+      }
+      console.log('✨ Database cleaning process finished.');
     }
-  }
 
   const password = await bcrypt.hash('password123', 10);
 
