@@ -47,46 +47,14 @@ export async function runSeed(app: INestApplicationContext) {
     console.log('⚠️  Could not synchronize schema, proceeding anyway...', error);
   }
 
-  // --- DATABASE SCHEMA PATCH (FORCED) ---
-  console.log('🛠️  Checking database schema consistency...');
+  // --- AUTOMATIC SCHEMA SYNC ---
+  console.log('🔄 Synchronizing database schema (Auto-creating tables)...');
   try {
-    // Manually add title column to notifications if it doesn't exist
-    await dataSource.query(`ALTER TABLE "notifications" ADD COLUMN IF NOT EXISTS "title" CHARACTER VARYING;`);
-    // Manually add deadline column to projects if it doesn't exist
-    await dataSource.query(`ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "deadline" TIMESTAMP WITH TIME ZONE;`);
-    console.log('✅ Database schema patched (title & deadline columns verified).');
+    await dataSource.synchronize();
+    console.log('✅ Database schema synchronized.');
   } catch (error) {
-    console.log('⚠️  Could not patch database schema manually, it might already be correct.');
+    console.log('⚠️  Could not synchronize schema, proceeding anyway...', error);
   }
-
-  const isForceSeed = process.env.FORCE_SEED === 'true';
-
-    if (isForceSeed) {
-      console.log('🗑️  Cleaning database (Robust truncate) due to FORCE_SEED...');
-      const tables = [
-        "audit_logs", 
-        "notifications", 
-        "daily_reports", 
-        "comments", 
-        "attachments", 
-        "tasks", 
-        "backlog_items", 
-        "sprints", 
-        "projects", 
-        "users",
-        "project_members"
-      ];
-
-      for (const table of tables) {
-        try {
-          await dataSource.query(`TRUNCATE TABLE "${table}" RESTART IDENTITY CASCADE;`);
-          console.log(`✅ Table "${table}" truncated.`);
-        } catch (error: any) {
-          console.log(`⚠️  Could not truncate table "${table}" (likely doesn't exist yet). Continuing...`);
-        }
-      }
-      console.log('✨ Database cleaning process finished.');
-    }
 
   const password = await bcrypt.hash('password123', 10);
 
@@ -100,7 +68,7 @@ export async function runSeed(app: INestApplicationContext) {
     return user;
   };
 
-  console.log('Checking/Creating Accounts...');
+  console.log('Checking Accounts...');
   const admin = await getOrCreateUser({ email: 'admin@example.com', name: 'System Admin', role: 'admin' });
   const engLead = await getOrCreateUser({ email: 'lead@engineering.com', name: 'Lead Engineer', role: 'manager' });
   const marketingDir = await getOrCreateUser({ email: 'director@marketing.com', name: 'Marketing Director', role: 'manager' });
@@ -136,29 +104,24 @@ export async function runSeed(app: INestApplicationContext) {
   await projectsService.addMember(marketingProject.id, { userId: mkt1.id }, marketingDir).catch(() => {});
 
   // --- IDEMPOTENT BACKLOG ITEMS ---
-  const seedBacklogItems = async (items: any[], projectId: string, owner: any) => {
+  const getOrCreateBacklogItem = async (itemData: any, owner: any) => {
     const repo = dataSource.getRepository('BacklogItem');
-    for (const item of items) {
-      const exists = await repo.findOne({ where: { title: item.title, projectId } });
-      if (!exists) {
-        console.log(`📋 Creating backlog item: ${item.title}`);
-        await backlogService.create({ ...item, description: `Task description for ${item.title}`, projectId }, owner);
-      }
+    let item = await repo.findOne({ where: { title: itemData.title, projectId: itemData.projectId } }) as any;
+    if (!item) {
+      console.log(`📋 Creating backlog item: ${itemData.title}`);
+      item = await backlogService.create({ ...itemData, description: `Task description for ${itemData.title}` }, owner);
     }
+    return item;
   };
 
   console.log('Building Engineering Backlogs...');
-  await seedBacklogItems([
-    { title: 'Database Indexing', priority: 'high', status: 'todo' },
-    { title: 'User Multi-tenant Isolation', priority: 'high', status: 'done' },
-    { title: 'GraphQL API Setup', priority: 'medium', status: 'in_progress' },
-  ], engineeringProject.id, engLead);
+  const bDatabase = await getOrCreateBacklogItem({ title: 'Database Schema Design', priority: 'high', status: 'done', projectId: engineeringProject.id }, engLead);
+  const bDashboard = await getOrCreateBacklogItem({ title: 'Responsive Dashboard UI', priority: 'high', status: 'in_progress', projectId: engineeringProject.id }, engLead);
+  const bAuth = await getOrCreateBacklogItem({ title: 'Microservices Auth Audit', priority: 'medium', status: 'todo', projectId: engineeringProject.id }, engLead);
+  const bTesting = await getOrCreateBacklogItem({ title: 'Unit Test Suite', priority: 'low', status: 'todo', projectId: engineeringProject.id }, engLead);
 
   console.log('Building Marketing Backlogs...');
-  await seedBacklogItems([
-    { title: 'Social Media Copy Q3', priority: 'high', status: 'todo' },
-    { title: 'Ad Spend Allocation', priority: 'medium', status: 'todo' },
-  ], marketingProject.id, marketingDir);
+  await getOrCreateBacklogItem({ title: 'Social Media Strategy', priority: 'high', status: 'todo', projectId: marketingProject.id }, marketingDir);
 
   // --- IDEMPOTENT SPRINTS ---
   const getOrCreateSprint = async (sprintData: any, owner: any) => {
@@ -171,54 +134,103 @@ export async function runSeed(app: INestApplicationContext) {
     return sprint;
   };
 
-  const engSprint = await getOrCreateSprint({
-    name: 'Engineering Sprint 1: Foundation', 
+  // 3 Cycle Sprints for Engineering
+  console.log('Scheduling Sprints...');
+  const engSprintPast = await getOrCreateSprint({
+    name: 'Iteration 0: Setup', 
+    startDate: new Date(new Date().setDate(new Date().getDate() - 20)), 
+    endDate: new Date(new Date().setDate(new Date().getDate() - 7)), 
+    status: 'completed', 
+    projectId: engineeringProject.id,
+  }, engLead);
+
+  const engSprintCurrent = await getOrCreateSprint({
+    name: 'Iteration 1: Implementation', 
     startDate: new Date(), 
     endDate: new Date(new Date().setDate(new Date().getDate() + 14)), 
     status: 'active', 
     projectId: engineeringProject.id,
   }, engLead);
 
-  const mktSprint = await getOrCreateSprint({
-    name: 'Marketing Sprint A', 
-    startDate: new Date(), 
-    endDate: new Date(new Date().setDate(new Date().getDate() + 14)), 
-    status: 'active', 
-    projectId: marketingProject.id,
-  }, marketingDir);
+  const engSprintFuture = await getOrCreateSprint({
+    name: 'Iteration 2: Polishing', 
+    startDate: new Date(new Date().setDate(new Date().getDate() + 15)), 
+    endDate: new Date(new Date().setDate(new Date().getDate() + 29)), 
+    status: 'planned', 
+    projectId: engineeringProject.id,
+  }, engLead);
 
   // --- IDEMPOTENT TASKS ---
-  const seedTasks = async (tasks: any[], owner: any) => {
+  const getOrCreateTask = async (taskData: any, owner: any) => {
     const repo = dataSource.getRepository('Task');
-    const backlogRepo = dataSource.getRepository('BacklogItem');
-    for (const task of tasks) {
-      const exists = await repo.findOne({ where: { title: task.title, sprintId: task.sprintId } });
+    let task = await repo.findOne({ where: { title: taskData.title, sprintId: taskData.sprintId } }) as any;
+    if (!task) {
+      console.log(`✅ Creating task: ${taskData.title}`);
+      task = await tasksService.create(taskData, owner);
+    }
+    return task;
+  };
+
+  const seedTaskDetails = async (task: any, comments: string[], owner: any) => {
+    // Add comments if they don't exist
+    const commentRepo = dataSource.getRepository('Comment');
+    for (const content of comments) {
+      const exists = await commentRepo.findOne({ where: { content, taskId: task.id } });
       if (!exists) {
-        console.log(`✅ Creating task: ${task.title}`);
-        const backlogItem = await backlogRepo.findOne({ where: { title: task.backlogTitle, projectId: task.projectId } }) as any;
-        await tasksService.create({
-          title: task.title,
-          description: task.description,
-          status: task.status as any,
-          priority: task.priority as any,
-          sprintId: task.sprintId,
-          backlogItemId: backlogItem?.id,
-          assigneeId: task.assigneeId,
-          deadline: new Date()
-        }, owner);
+        await tasksService.addComment(task.id, content, owner);
       }
     }
   };
 
-  const engBacklog = await backlogService.findAllByProject(engineeringProject.id, engLead);
-  await seedTasks([
-    { title: 'Migrate Neon Database schema', backlogTitle: 'Database Indexing', projectId: engineeringProject.id, description: 'Truncate logic setup', status: 'done', priority: 'high', sprintId: engSprint.id, assigneeId: eng2.id },
-    { title: 'Update React Components', backlogTitle: 'Database Indexing', projectId: engineeringProject.id, description: 'Add modal to backlog and task lists', status: 'in_progress', priority: 'medium', sprintId: engSprint.id, assigneeId: eng1.id },
-  ], engLead);
+  console.log('Seeding Tasks...');
+  // Past Tasks (Sprint 0)
+  const t1 = await getOrCreateTask({
+    title: 'Model Database Relations',
+    description: 'Setup TypeORM entities and relations',
+    status: 'done',
+    priority: 'high',
+    sprintId: engSprintPast.id,
+    backlogItemId: bDatabase.id,
+    assigneeId: eng2.id,
+    deadline: new Date(new Date().setDate(new Date().getDate() - 10))
+  }, engLead);
+  await seedTaskDetails(t1, ["Schema logic is solid.", "Already deployed to Neon."], engLead);
 
-  await seedTasks([
-    { title: 'Post 3 TikTok Videos', backlogTitle: 'Social Media Copy Q3', projectId: marketingProject.id, description: 'Engaging content regarding the V2 Release', status: 'in_progress', priority: 'high', sprintId: mktSprint.id, assigneeId: mkt1.id },
-  ], marketingDir);
+  // Current Tasks (Sprint 1) - Assigned to Dev1 and Dev2
+  const t2 = await getOrCreateTask({
+    title: 'Component Library Integration',
+    description: 'Setup Tailwind and headless UI components',
+    status: 'in_progress',
+    priority: 'high',
+    sprintId: engSprintCurrent.id,
+    backlogItemId: bDashboard.id,
+    assigneeId: eng1.id, // Frontend Dev
+    deadline: new Date(new Date().setDate(new Date().getDate() + 5))
+  }, engLead);
+  await seedTaskDetails(t2, ["Working on the primary theme.", "@dev2 how's the API progress?"], eng1);
+
+  const t3 = await getOrCreateTask({
+    title: 'Connect Sprint Board to API',
+    description: 'Implement drag-and-drop syncing with backend',
+    status: 'todo',
+    priority: 'high',
+    sprintId: engSprintCurrent.id,
+    backlogItemId: bDashboard.id,
+    assigneeId: eng2.id, // Backend Dev
+    deadline: new Date(new Date().setDate(new Date().getDate() + 7))
+  }, engLead);
+
+  // Future Tasks (Sprint 2)
+  await getOrCreateTask({
+    title: 'Penetration Testing',
+    description: 'Security audit for JWT and RBAC',
+    status: 'todo',
+    priority: 'medium',
+    sprintId: engSprintFuture.id,
+    backlogItemId: bAuth.id,
+    assigneeId: eng2.id,
+    deadline: new Date(new Date().setDate(new Date().getDate() + 20))
+  }, engLead);
 
   console.log('🌱 Seed Completed/Verified Successfully!');
 }
