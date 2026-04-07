@@ -10,7 +10,6 @@ import * as bcrypt from 'bcrypt';
 import { INestApplicationContext } from '@nestjs/common';
 
 export async function runSeed(app: INestApplicationContext) {
-  // Get all services
   const dataSource = app.get(DataSource);
   const usersService = app.get(UsersService);
   const projectsService = app.get(ProjectsService);
@@ -20,32 +19,15 @@ export async function runSeed(app: INestApplicationContext) {
 
   console.log('🌱 Starting Seed Process...');
 
-  // Wait for Database Tables to be Ready
   let tablesExist = false;
   let retries = 5;
   while (retries > 0 && !tablesExist) {
     try {
-      // Check if critical table exists
       await dataSource.query('SELECT count(*) FROM "users" LIMIT 1');
       tablesExist = true;
       console.log('✅ Database tables detected.');
-    } catch (err) {
-      console.log(`⏳ Database tables not ready yet. Error: ${err.message}.`);
-      
-      // Try to force synchronize if tables are missing
-      if (err.message.includes('does not exist')) {
-        console.log('🛠️ Attempting to force create tables (synchronize)...');
-        try {
-          await dataSource.synchronize();
-          console.log('✅ Tables created successfully via synchronize!');
-          tablesExist = true;
-          continue;
-        } catch (syncErr) {
-          console.error('❌ Failed to synchronize tables:', syncErr.message);
-        }
-      }
-
-      console.log(`Retrying in 5s... (${retries} attempts left)`);
+    } catch (err: any) {
+      console.log(`⏳ Database tables not ready yet. Error: ${err.message}. Retrying in 5s... (${retries} attempts left)`);
       retries--;
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
@@ -56,139 +38,99 @@ export async function runSeed(app: INestApplicationContext) {
     return;
   }
 
-  // 0. Clean Database (Optional: Only if FORCE_SEED is true)
   if (process.env.FORCE_SEED === 'true') {
-    console.log('🗑️  Cleaning database...');
+    console.log('🗑️  Cleaning database (Cascade truncate)...');
     try {
       await dataSource.query(`TRUNCATE TABLE "audit_logs", "notifications", "daily_reports", "tasks", "backlog_items", "sprints", "projects", "users" RESTART IDENTITY CASCADE;`);
-      console.log('✅ Database cleaned');
+      // Also potentially clear project members many-to-many junction table:
+      await dataSource.query(`TRUNCATE TABLE "project_members" RESTART IDENTITY CASCADE;`).catch(() => {});
+      console.log('✅ Database cleaned via FORCE_SEED.');
     } catch (error) {
-      console.log('⚠️  Could not clean database (tables might not exist yet), proceeding...');
+      console.log('⚠️  Could not clean database entirely, proceeding...', error);
     }
   }
 
-  // 1. Create Users
-  console.log('Creating Users...');
   const password = await bcrypt.hash('password123', 10);
+
+  console.log('Creating Accounts...');
   
-  // Admin
-  let adminUser = await usersService.findOneByEmail('admin@example.com');
-  if (!adminUser) {
-    adminUser = await usersService.create({
-      email: 'admin@example.com',
-      password: password,
-      name: 'Admin User',
-      role: 'admin',
-    });
-    console.log('✅ Admin user created');
+  // Create Admins and Managers
+  const admin = await usersService.create({ email: 'admin@example.com', password, name: 'System Admin', role: 'admin' });
+  const engLead = await usersService.create({ email: 'lead@engineering.com', password, name: 'Lead Engineer', role: 'manager' });
+  const marketingDir = await usersService.create({ email: 'director@marketing.com', password, name: 'Marketing Director', role: 'manager' });
+
+  // Create Team Members
+  const eng1 = await usersService.create({ email: 'dev1@engineering.com', password, name: 'Frontend Dev', role: 'user' });
+  const eng2 = await usersService.create({ email: 'dev2@engineering.com', password, name: 'Backend Dev', role: 'user' });
+  const mkt1 = await usersService.create({ email: 'marketer@marketing.com', password, name: 'Content Creator', role: 'user' });
+
+  console.log('Creating Engineering Project...');
+  const engineeringProject = await projectsService.create({
+    name: 'V2 Platform Engineering',
+    description: 'Core application redesign, building multi-tenant capabilities, and performance optimizations.',
+  }, engLead);
+  
+  // Add members manually for team context
+  await projectsService.addMember(engineeringProject.id, { userId: eng1.id }, engLead).catch(() => {});
+  await projectsService.addMember(engineeringProject.id, { userId: eng2.id }, engLead).catch(() => {});
+
+  console.log('Creating Marketing Project...');
+  const marketingProject = await projectsService.create({
+    name: 'Q3 Product Launch',
+    description: 'Marketing campaigns, SEO strategy, and branding assets for the upcoming product drop.',
+  }, marketingDir);
+
+  await projectsService.addMember(marketingProject.id, { userId: mkt1.id }, marketingDir).catch(() => {});
+
+  const engBacklogItems = [
+    { title: 'Database Indexing', priority: 'high', status: 'todo' },
+    { title: 'User Multi-tenant Isolation', priority: 'high', status: 'done' },
+    { title: 'GraphQL API Setup', priority: 'medium', status: 'in_progress' },
+  ];
+  
+  const mktBacklogItems = [
+    { title: 'Social Media Copy Q3', priority: 'high', status: 'todo' },
+    { title: 'Ad Spend Allocation', priority: 'medium', status: 'todo' },
+  ];
+
+  console.log('Building Engineering Backlogs & Sprints...');
+  for (const item of engBacklogItems) {
+    await backlogService.create({
+      title: item.title, description: `Task description for ${item.title}`, priority: item.priority as any, status: item.status as any, projectId: engineeringProject.id,
+    }, engLead);
   }
 
-  // Project Manager
-  let managerUser = await usersService.findOneByEmail('manager@example.com');
-  if (!managerUser) {
-    managerUser = await usersService.create({
-      email: 'manager@example.com',
-      password: password,
-      name: 'Project Manager',
-      role: 'manager',
-    });
-    console.log('✅ Manager user created');
+  const engSprint = await sprintsService.create({
+    name: 'Engineering Sprint 1: Foundation', startDate: new Date(), endDate: new Date(new Date().setDate(new Date().getDate() + 14)), status: 'active', projectId: engineeringProject.id,
+  }, engLead);
+
+  const engBacklog = await backlogService.findAllByProject(engineeringProject.id, engLead);
+  await tasksService.create({
+    title: 'Migrate Neon Database schema', description: 'Truncate logic setup', status: 'done', priority: 'high', sprintId: engSprint.id, backlogItemId: engBacklog[0].id, assigneeId: eng2.id, deadline: new Date()
+  }, engLead);
+  await tasksService.create({
+    title: 'Update React Components', description: 'Add modal to backlog and task lists', status: 'in_progress', priority: 'medium', sprintId: engSprint.id, backlogItemId: engBacklog[0].id, assigneeId: eng1.id, deadline: new Date()
+  }, engLead);
+
+
+  console.log('Building Marketing Backlogs & Sprints...');
+  for (const item of mktBacklogItems) {
+    await backlogService.create({
+      title: item.title, description: `Content execution for ${item.title}`, priority: item.priority as any, status: item.status as any, projectId: marketingProject.id,
+    }, marketingDir);
   }
 
-  // Developer
-  let devUser = await usersService.findOneByEmail('dev@example.com');
-  if (!devUser) {
-    devUser = await usersService.create({
-      email: 'dev@example.com',
-      password: password,
-      name: 'John Developer',
-      role: 'user',
-    });
-    console.log('✅ Developer user created');
-  }
+  const mktSprint = await sprintsService.create({
+    name: 'Marketing Sprint A', startDate: new Date(), endDate: new Date(new Date().setDate(new Date().getDate() + 14)), status: 'active', projectId: marketingProject.id,
+  }, marketingDir);
 
-  // 2. Create Project
-  console.log('Creating Project...');
-  let project = (await projectsService.findAll(adminUser))[0];
-  if (!project) {
-    project = await projectsService.create({
-      name: 'E-Commerce Platform Redesign',
-      description: 'Revamping the legacy e-commerce site with modern tech stack.',
-    }, managerUser);
-    console.log('✅ Sample project created');
-  }
+  const mktBacklog = await backlogService.findAllByProject(marketingProject.id, marketingDir);
+  await tasksService.create({
+    title: 'Post 3 TikTok Videos', description: 'Engaging content regarding the V2 Release', status: 'in_progress', priority: 'high', sprintId: mktSprint.id, backlogItemId: mktBacklog[0].id, assigneeId: mkt1.id, deadline: new Date()
+  }, marketingDir);
 
-  // 3. Create Backlog Items
-  console.log('Creating Backlog Items...');
-  const existingBacklog = await backlogService.findAllByProject(project.id);
-  if (existingBacklog.length === 0) {
-    const items = [
-      { title: 'User Authentication', priority: 'high', status: 'todo' },
-      { title: 'Product Catalog', priority: 'high', status: 'todo' },
-      { title: 'Shopping Cart', priority: 'medium', status: 'todo' },
-      { title: 'Payment Gateway Integration', priority: 'high', status: 'todo' },
-    ];
 
-    for (const item of items) {
-      await backlogService.create({
-        title: item.title,
-        description: `Implement ${item.title} functionality`,
-        priority: item.priority as any,
-        status: item.status as any,
-        projectId: project.id,
-      }, managerUser);
-    }
-    console.log('✅ Backlog items created');
-  }
-
-  // 4. Create Sprint
-  console.log('Creating Sprint...');
-  let sprint = (await sprintsService.findAllByProject(project.id))[0];
-  if (!sprint) {
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 14); // 2 weeks sprint
-
-    sprint = await sprintsService.create({
-      name: 'Sprint 1: Core Foundation',
-      startDate: startDate,
-      endDate: endDate,
-      status: 'active',
-      projectId: project.id,
-    }, managerUser);
-    console.log('✅ Sprint 1 created');
-  }
-
-  // 5. Create Tasks
-  console.log('Creating Tasks...');
-  const existingTasks = await tasksService.findAll(sprint.id);
-  if (existingTasks.length === 0) {
-    const backlogItems = await backlogService.findAllByProject(project.id);
-    
-    // Create tasks for the first backlog item
-    if (backlogItems.length > 0) {
-      const tasks = [
-        { title: 'Setup JWT Auth', assigneeId: devUser.id },
-        { title: 'Design Login Page', assigneeId: devUser.id },
-        { title: 'API for User Registration', assigneeId: devUser.id },
-      ];
-
-      for (const t of tasks) {
-        await tasksService.create({
-          title: t.title,
-          description: `Detailed description for ${t.title}`,
-          status: 'todo',
-          priority: 'high',
-          sprintId: sprint.id,
-          backlogItemId: backlogItems[0].id,
-          assigneeId: t.assigneeId,
-        }, managerUser);
-      }
-      console.log('✅ Tasks created for Sprint 1');
-    }
-  }
-
-  console.log('🌱 Seed Completed Successfully');
+  console.log('🌱 Seed Completed Successfully with Team Data!');
 }
 
 export async function bootstrap() {

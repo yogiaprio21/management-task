@@ -1,7 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, VersionColumn, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, VersionColumn, ManyToOne, OneToMany, Index } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Sprint } from '../sprints/sprint.entity';
 import { BacklogItem } from '../backlog/backlog-item.entity';
+import { Comment } from './comment.entity';
+import { Attachment } from './attachment.entity';
 
 @Entity('tasks')
 export class Task {
@@ -53,6 +55,12 @@ export class Task {
 
   @ManyToOne(() => BacklogItem, (item) => item.tasks)
   backlogItem: BacklogItem;
+
+  @OneToMany(() => Comment, (comment) => comment.task)
+  comments: Comment[];
+
+  @OneToMany(() => Attachment, (attachment) => attachment.task)
+  attachments: Attachment[];
 
   @CreateDateColumn()
   @Index()

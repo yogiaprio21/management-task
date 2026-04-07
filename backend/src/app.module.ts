@@ -24,6 +24,8 @@ import { Project } from './projects/project.entity';
 import { Sprint } from './sprints/sprint.entity';
 import { BacklogItem } from './backlog/backlog-item.entity';
 import { Task } from './tasks/task.entity';
+import { Comment } from './tasks/comment.entity';
+import { Attachment } from './tasks/attachment.entity';
 import { Notification } from './notifications/notification.entity';
 import { DailyReport } from './reports/daily-report.entity';
 import { AuditLog } from './audit/audit-log.entity';
@@ -56,6 +58,8 @@ import { AuditLog } from './audit/audit-log.entity';
           Sprint,
           BacklogItem,
           Task,
+          Comment,
+          Attachment,
           Notification,
           DailyReport,
           AuditLog,

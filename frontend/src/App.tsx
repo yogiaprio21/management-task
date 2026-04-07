@@ -13,6 +13,12 @@ import ProjectList from './pages/ProjectList';
 import ProjectDetail from './pages/ProjectDetail';
 import TaskList from './pages/TaskList';
 import UserList from './pages/UserList';
+import SprintBoard from './pages/SprintBoard';
+import ProductBacklog from './pages/ProductBacklog';
+import ReportsDashboard from './pages/ReportsDashboard';
+import AuditLogs from './pages/AuditLogs';
+import SystemHealth from './pages/SystemHealth';
+import Integrations from './pages/Integrations';
 import { PageLoader } from './components/Spinner';
 
 const queryClient = new QueryClient();
@@ -44,8 +50,14 @@ function App() {
                   <Route index element={<Dashboard />} />
                   <Route path="projects" element={<ProjectList />} />
                   <Route path="projects/:id" element={<ProjectDetail />} />
+                  <Route path="sprints" element={<SprintBoard />} />
+                  <Route path="backlog" element={<ProductBacklog />} />
+                  <Route path="reports" element={<ReportsDashboard />} />
                   <Route path="tasks" element={<TaskList />} />
                   <Route path="users" element={<UserList />} />
+                  <Route path="admin/audit" element={<AuditLogs />} />
+                  <Route path="admin/health" element={<SystemHealth />} />
+                  <Route path="settings/integrations" element={<Integrations />} />
                 </Route>
               </Routes>
             </Router>

@@ -21,7 +21,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://management-task1.vercel.app
+        value: https://task-management-frontend.onrender.com
 
   # Frontend Service (Static Site)
   - type: static

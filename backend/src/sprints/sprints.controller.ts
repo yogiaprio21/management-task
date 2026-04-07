@@ -18,13 +18,13 @@ export class SprintsController {
   }
 
   @Get()
-  findAll(@Query('projectId') projectId: string) {
-    return this.sprintsService.findAllByProject(projectId);
+  findAll(@Query('projectId') projectId: string, @CurrentUser() user: User) {
+    return this.sprintsService.findAllByProject(projectId, user);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.sprintsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.sprintsService.findOne(id, user);
   }
 
   @Patch(':id')

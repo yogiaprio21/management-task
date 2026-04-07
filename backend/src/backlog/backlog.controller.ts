@@ -18,13 +18,13 @@ export class BacklogController {
   }
 
   @Get()
-  findAll(@Query('projectId') projectId: string) {
-    return this.backlogService.findAllByProject(projectId);
+  findAll(@Query('projectId') projectId: string, @CurrentUser() user: User) {
+    return this.backlogService.findAllByProject(projectId, user);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.backlogService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.backlogService.findOne(id, user);
   }
 
   @Patch(':id')

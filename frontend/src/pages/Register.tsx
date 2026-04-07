@@ -35,8 +35,9 @@ const Register: React.FC = () => {
         toast.success('Registration successful! Please login.');
         navigate('/login');
       }
-    } catch {
-      // Error handled globally
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Failed to create account. Please try again.';
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

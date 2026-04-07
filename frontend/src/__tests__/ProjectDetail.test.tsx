@@ -45,12 +45,24 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 
 describe('ProjectDetail Component', () => {
   it('renders project title', async () => {
-    render(<ProjectDetail />, { wrapper: Wrapper }); // The wrapper now handles the route
-    // Since we rely on async data, we might need waitFor or findBy
-    // For simplicity in this mockup:
+    render(<ProjectDetail />, { wrapper: Wrapper });
     expect(await screen.findByText('Test Project')).toBeDefined();
   });
 
-  // Test for BoardView interactions would go here
-  // simulating click on edit/delete buttons
+  it('opens task modal when a task is clicked', async () => {
+    render(<ProjectDetail />, { wrapper: Wrapper });
+    
+    // Switch to board tab
+    const boardTab = await screen.findByText('Active Sprint');
+    boardTab.click();
+
+    // Find task and click it
+    const taskElement = await screen.findByText('Task 1');
+    taskElement.click();
+
+    // Check if modal title appears
+    expect(await screen.findByText('Task 1')).toBeDefined();
+    expect(await screen.findByText('Details')).toBeDefined();
+    expect(await screen.findByText('Comments')).toBeDefined();
+  });
 });
