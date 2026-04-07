@@ -31,6 +31,10 @@ export class Project {
   @OneToMany(() => BacklogItem, (item) => item.project)
   backlogItems: BacklogItem[];
 
+  @Column({ nullable: true })
+  @Index()
+  deadline: Date;
+
   @CreateDateColumn()
   @Index()
   createdAt: Date;

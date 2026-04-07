@@ -41,9 +41,11 @@ export async function runSeed(app: INestApplicationContext) {
   // --- DATABASE SCHEMA PATCH (FORCED) ---
   console.log('🛠️  Checking database schema consistency...');
   try {
-    // Manually add title column to notifications if it doesn't exist (TypeORM sync sometimes fails on existing data)
+    // Manually add title column to notifications if it doesn't exist
     await dataSource.query(`ALTER TABLE "notifications" ADD COLUMN IF NOT EXISTS "title" CHARACTER VARYING;`);
-    console.log('✅ Database schema patched (title column verified).');
+    // Manually add deadline column to projects if it doesn't exist
+    await dataSource.query(`ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "deadline" TIMESTAMP WITH TIME ZONE;`);
+    console.log('✅ Database schema patched (title & deadline columns verified).');
   } catch (error) {
     console.log('⚠️  Could not patch database schema manually, it might already be correct.');
   }

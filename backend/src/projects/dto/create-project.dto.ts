@@ -11,6 +11,10 @@ export class CreateProjectDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @ApiPropertyOptional({ example: '2026-12-31', description: 'Project deadline' })
+  @IsOptional()
+  deadline?: Date;
 }
 
 export class UpdateProjectDto {
@@ -23,4 +27,8 @@ export class UpdateProjectDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @ApiPropertyOptional({ example: '2026-12-31' })
+  @IsOptional()
+  deadline?: Date;
 }

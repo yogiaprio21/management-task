@@ -18,10 +18,19 @@ const Dashboard: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [deadline, setDeadline] = useState('');
 
   const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: getProjects,
+    select: (data) => {
+      // Sort projects by deadline (nearest first)
+      return [...data].sort((a, b) => {
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+      });
+    }
   });
 
   const { data: tasks } = useQuery({
@@ -53,6 +62,7 @@ const Dashboard: React.FC = () => {
       setIsCreating(false);
       setName('');
       setDescription('');
+      setDeadline('');
     },
     onError: () => {
       toast.error('Failed to create project');
@@ -62,7 +72,7 @@ const Dashboard: React.FC = () => {
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    createMutation.mutate({ name, description });
+    createMutation.mutate({ name, description, deadline });
   };
 
   if (projectsLoading) {
@@ -153,7 +163,7 @@ const Dashboard: React.FC = () => {
           <div className="space-y-6">
             <div className="flex items-center gap-3 px-2">
               <Layout className="w-6 h-6 text-slate-400" />
-              <h2 className="text-2xl font-bold text-slate-800">Recent Projects</h2>
+              <h2 className="text-2xl font-bold text-slate-800">Projects by Deadline</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -167,8 +177,16 @@ const Dashboard: React.FC = () => {
                   <Link to={`/projects/${project.id}`}>
                     <Card className="h-full p-8 flex flex-col justify-between group cursor-pointer card-gradient">
                       <div className="space-y-4">
-                        <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300">
-                          <Layout className="w-7 h-7" />
+                        <div className="flex justify-between items-start">
+                          <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300">
+                            <Layout className="w-7 h-7" />
+                          </div>
+                          {project.deadline && (
+                            <div className="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black rounded-lg uppercase tracking-tight flex items-center gap-1.5 shadow-sm">
+                              <Clock className="w-3 h-3" />
+                              Due {new Date(project.deadline).toLocaleDateString()}
+                            </div>
+                          )}
                         </div>
                         <div>
                           <h3 className="text-xl font-extrabold text-slate-800 group-hover:text-primary transition-colors">{project.name}</h3>
@@ -223,6 +241,12 @@ const Dashboard: React.FC = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     autoFocus
+                  />
+                  <Input
+                    label="Target Deadline"
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
                   />
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Description</label>

@@ -1,14 +1,18 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAuditLogs } from '../api/audit';
-import { ScrollText, Loader2, Activity } from 'lucide-react';
+import { ScrollText, Loader2, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card } from '../ui/Card';
+import { Button } from '../ui/Button';
 import { toast } from 'react-hot-toast';
 
 const AuditLogs: React.FC = () => {
+  const [page, setPage] = React.useState(0);
+  const limit = 20;
+
   const { data: logs, isLoading, error } = useQuery({
-    queryKey: ['audit'],
-    queryFn: () => getAuditLogs(),
+    queryKey: ['audit', page],
+    queryFn: () => getAuditLogs(limit, page * limit),
   });
 
   React.useEffect(() => {
@@ -71,6 +75,33 @@ const AuditLogs: React.FC = () => {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <div className="text-sm text-slate-500 font-medium">
+                Page {page + 1}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Previous
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={logs.length < limit}
+                  className="gap-1"
+                >
+                  Next <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </Card>
