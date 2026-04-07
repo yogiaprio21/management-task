@@ -7,6 +7,9 @@ export class Notification {
   id: string;
 
   @Column()
+  title: string;
+
+  @Column()
   message: string;
 
   @Column({ default: false })

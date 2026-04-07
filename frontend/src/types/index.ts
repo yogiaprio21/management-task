@@ -87,6 +87,8 @@ export interface Attachment {
 export interface AuditLog {
   id: string;
   action: string;
+  entityType: string;
+  entityId: string;
   details: string;
   createdAt: string;
   user: User;

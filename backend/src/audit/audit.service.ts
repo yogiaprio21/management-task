@@ -21,4 +21,13 @@ export class AuditService {
     });
     return this.auditRepository.save(log);
   }
+
+  async findAll(limit: number = 50, offset: number = 0) {
+    return this.auditRepository.find({
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+      take: limit,
+      skip: offset,
+    });
+  }
 }

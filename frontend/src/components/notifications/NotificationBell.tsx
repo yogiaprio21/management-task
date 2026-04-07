@@ -13,7 +13,7 @@ const NotificationBell: React.FC = () => {
     queryFn: getNotifications,
   });
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const markReadMutation = useMutation({
     mutationFn: markAsRead,
@@ -63,16 +63,16 @@ const NotificationBell: React.FC = () => {
                 notifications.map(notification => (
                   <div 
                     key={notification.id} 
-                    className={`p-4 border-b hover:bg-gray-50 transition-colors group cursor-pointer ${!notification.read ? 'bg-blue-50/30' : ''}`}
+                    className={`p-4 border-b hover:bg-gray-50 transition-colors group cursor-pointer ${!notification.isRead ? 'bg-blue-50/30' : ''}`}
                     onClick={() => {
-                       if(!notification.read) markReadMutation.mutate(notification.id);
+                       if(!notification.isRead) markReadMutation.mutate(notification.id);
                     }}
                   >
                     <div className="flex justify-between items-start">
-                      <p className={`text-sm ${!notification.read ? 'font-bold text-gray-900' : 'font-medium text-gray-600'}`}>
+                      <p className={`text-sm ${!notification.isRead ? 'font-bold text-gray-900' : 'font-medium text-gray-600'}`}>
                         {notification.title}
                       </p>
-                      {!notification.read && <div className="w-2 h-2 rounded-full bg-primary mt-1.5" />}
+                      {!notification.isRead && <div className="w-2 h-2 rounded-full bg-primary mt-1.5" />}
                     </div>
                     <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notification.message}</p>
                     <p className="text-[10px] text-gray-400 mt-2 font-semibold">
