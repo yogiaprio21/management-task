@@ -253,27 +253,39 @@ const ProjectDetail: React.FC = () => {
       </motion.div>
 
       {/* Tabs Navigation */}
-      <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-sm inline-flex w-full md:w-auto">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`
-                flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200
-                ${isActive 
-                  ? 'bg-primary text-white shadow-lg shadow-primary/25 scale-[1.02]' 
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}
-              `}
-            >
-              <Icon className={`w-4 h-4 ${isActive ? 'animate-pulse' : ''}`} />
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-sm flex flex-nowrap overflow-x-auto scrollbar-hide w-full md:w-auto">
+        <div className="flex flex-nowrap gap-1 min-w-full md:min-w-0">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`
+                  flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 whitespace-nowrap flex-shrink-0
+                  ${isActive 
+                    ? 'bg-primary text-white shadow-lg shadow-primary/25 scale-[1.02]' 
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}
+                `}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? 'animate-pulse' : ''}`} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
 
       {/* Content Area */}
       <motion.div

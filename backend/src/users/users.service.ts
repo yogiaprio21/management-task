@@ -23,7 +23,11 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { id } });
   }
 
-  async findAll(): Promise<User[]> {
-    return this.usersRepository.find();
+  async findAll(limit: number = 20, offset: number = 0): Promise<User[]> {
+    return this.usersRepository.find({
+      take: limit,
+      skip: offset,
+      order: { name: 'ASC' }
+    });
   }
 }

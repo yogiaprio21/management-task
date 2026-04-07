@@ -12,6 +12,7 @@ export interface Project {
   ownerId: string;
   owner?: User;
   members: User[];
+  deadline?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
@@ -122,6 +123,7 @@ export interface LoginDto {
 export interface CreateProjectDto {
   name: string;
   description: string;
+  deadline?: string;
 }
 
 export type UpdateProjectDto = Partial<CreateProjectDto>;

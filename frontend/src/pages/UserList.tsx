@@ -2,19 +2,22 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getUsers, updateUser, deleteUser } from '../api/users';
 import type { User } from '../types';
-import { Trash2, UserCog, Shield, Check, X } from 'lucide-react';
+import { Trash2, UserCog, Shield, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
+import { Button } from '../ui/Button';
 
 const UserList: React.FC = () => {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<User['role']>('user');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const limit = 10;
 
   const { data: users, isLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: getUsers,
+    queryKey: ['users', page],
+    queryFn: () => getUsers(limit, page * limit),
   });
 
   const updateMutation = useMutation({
@@ -54,7 +57,7 @@ const UserList: React.FC = () => {
   if (isLoading) return <div className="p-8 text-center text-gray-500">Loading users...</div>;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto pb-24">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
           <UserCog className="w-8 h-8 text-primary" />
@@ -162,6 +165,33 @@ const UserList: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+        
+        {/* Pagination Controls */}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+          <div className="text-sm text-gray-500 font-medium">
+            Showing page {page + 1}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="gap-1"
+            >
+              <ChevronLeft className="w-4 h-4" /> Previous
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setPage(p => p + 1)}
+              disabled={!users || users.length < limit}
+              className="gap-1"
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

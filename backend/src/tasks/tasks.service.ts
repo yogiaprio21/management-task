@@ -65,14 +65,26 @@ export class TasksService {
       where: { id }, 
       relations: [
         'assignee', 'creator', 'sprint', 'sprint.project', 
-        'sprint.project.members', 'backlogItem', 
-        'comments', 'comments.user', 'attachments'
+        'sprint.project.members', 'backlogItem', 'backlogItem.project',
+        'backlogItem.project.members', 'comments', 'comments.user', 'attachments'
       ] 
     });
+    
     if (!task) throw new NotFoundException('Task not found');
 
-    const isMember = task.sprint.project.members.some(m => m.id === user.id);
-    const isOwner = task.sprint.project.ownerId === user.id;
+    // Robust Project Context Detection
+    const project = task.sprint?.project || task.backlogItem?.project;
+    
+    if (!project) {
+      // If task is orphan (no sprint AND no backlogItem), only Admin or Creator can access
+      if (user.role !== 'admin' && task.creatorId !== user.id) {
+        throw new ForbiddenException('You do not have access to this orphan task');
+      }
+      return task;
+    }
+
+    const isMember = project.members?.some(m => m.id === user.id) || false;
+    const isOwner = project.ownerId === user.id;
 
     if (!isOwner && !isMember && user.role !== 'admin') {
       throw new ForbiddenException('You do not have access to this task');

@@ -1,8 +1,10 @@
 import api from './client';
 import type { User } from '../types';
 
-export const getUsers = async () => {
-  const response = await api.get<User[]>('/users');
+export const getUsers = async (limit: number = 20, offset: number = 0) => {
+  const response = await api.get<User[]>('/users', {
+    params: { limit, offset }
+  });
   return response.data;
 };
 
