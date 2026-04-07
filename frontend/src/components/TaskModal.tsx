@@ -22,7 +22,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'attachments' | 'history'>('details');
   const [commentText, setCommentText] = useState('');
 
-  const { data: users } = useQuery({ queryKey: ['users'], queryFn: getUsers });
+  const { data: users } = useQuery({ queryKey: ['users'], queryFn: () => getUsers() });
   
   const { data: task } = useQuery({
     queryKey: ['task', initialTask?.id],
