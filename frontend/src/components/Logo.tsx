@@ -36,7 +36,7 @@ const Logo: React.FC<LogoProps> = ({ className = '', size = 32, showText = true,
       </svg>
       {showText && (
         <span className={`text-xl font-black tracking-tight ${dark ? 'text-white' : 'text-slate-900'} dark:text-white`}>
-          Task<span className="text-primary">Flow</span>
+          Task <span className="text-primary">Flow</span>
         </span>
       )}
     </div>

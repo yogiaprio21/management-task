@@ -20,14 +20,12 @@ export async function runSeed(app: INestApplicationContext) {
   console.log('🌱 Starting Seed Process...');
 
   let tablesExist = false;
-  let userCount = 0;
   let retries = 5;
   while (retries > 0 && !tablesExist) {
     try {
-      const result = await dataSource.query('SELECT count(*) FROM "users"');
-      userCount = parseInt(result[0].count);
+      await dataSource.query('SELECT count(*) FROM "users"');
       tablesExist = true;
-      console.log(`✅ Database tables detected. Current user count: ${userCount}`);
+      console.log(`✅ Database tables detected.`);
     } catch (err: any) {
       console.log(`⏳ Database tables not ready yet. Error: ${err.message}. Retrying in 5s... (${retries} attempts left)`);
       retries--;
@@ -42,17 +40,10 @@ export async function runSeed(app: INestApplicationContext) {
 
   const isForceSeed = process.env.FORCE_SEED === 'true';
 
-  // SKIP SEED IF DATA EXISTS AND NOT FORCED
-  if (userCount > 0 && !isForceSeed) {
-    console.log('✨ Database already seeded (contains users). Skipping seed process to avoid duplicates.');
-    return;
-  }
-
   if (isForceSeed) {
     console.log('🗑️  Cleaning database (Cascade truncate) due to FORCE_SEED...');
     try {
       await dataSource.query(`TRUNCATE TABLE "audit_logs", "notifications", "daily_reports", "tasks", "backlog_items", "sprints", "projects", "users" RESTART IDENTITY CASCADE;`);
-      // Also potentially clear project members many-to-many junction table:
       await dataSource.query(`TRUNCATE TABLE "project_members" RESTART IDENTITY CASCADE;`).catch(() => {});
       console.log('✅ Database cleaned via FORCE_SEED.');
     } catch (error) {
@@ -62,85 +53,137 @@ export async function runSeed(app: INestApplicationContext) {
 
   const password = await bcrypt.hash('password123', 10);
 
-  console.log('Creating Accounts...');
-  
-  // Create Admins and Managers
-  const admin = await usersService.create({ email: 'admin@example.com', password, name: 'System Admin', role: 'admin' });
-  const engLead = await usersService.create({ email: 'lead@engineering.com', password, name: 'Lead Engineer', role: 'manager' });
-  const marketingDir = await usersService.create({ email: 'director@marketing.com', password, name: 'Marketing Director', role: 'manager' });
+  // --- IDEMPOTENT USER CREATION ---
+  const getOrCreateUser = async (userData: any) => {
+    let user = await usersService.findOneByEmail(userData.email);
+    if (!user) {
+      console.log(`👤 Creating user: ${userData.email}`);
+      user = await usersService.create({ ...userData, password });
+    }
+    return user;
+  };
 
-  // Create Team Members
-  const eng1 = await usersService.create({ email: 'dev1@engineering.com', password, name: 'Frontend Dev', role: 'user' });
-  const eng2 = await usersService.create({ email: 'dev2@engineering.com', password, name: 'Backend Dev', role: 'user' });
-  const mkt1 = await usersService.create({ email: 'marketer@marketing.com', password, name: 'Content Creator', role: 'user' });
+  console.log('Checking/Creating Accounts...');
+  const admin = await getOrCreateUser({ email: 'admin@example.com', name: 'System Admin', role: 'admin' });
+  const engLead = await getOrCreateUser({ email: 'lead@engineering.com', name: 'Lead Engineer', role: 'manager' });
+  const marketingDir = await getOrCreateUser({ email: 'director@marketing.com', name: 'Marketing Director', role: 'manager' });
+  const eng1 = await getOrCreateUser({ email: 'dev1@engineering.com', name: 'Frontend Dev', role: 'user' });
+  const eng2 = await getOrCreateUser({ email: 'dev2@engineering.com', name: 'Backend Dev', role: 'user' });
+  const mkt1 = await getOrCreateUser({ email: 'marketer@marketing.com', name: 'Content Creator', role: 'user' });
 
-  console.log('Creating Engineering Project...');
-  const engineeringProject = await projectsService.create({
+  // --- IDEMPOTENT PROJECT CREATION ---
+  const getOrCreateProject = async (projectData: any, owner: any) => {
+    const repo = dataSource.getRepository('Project');
+    let project = await repo.findOne({ where: { name: projectData.name } }) as any;
+    if (!project) {
+      console.log(`📁 Creating project: ${projectData.name}`);
+      project = await projectsService.create(projectData, owner);
+    }
+    return project;
+  };
+
+  console.log('Checking Projects...');
+  const engineeringProject = await getOrCreateProject({
     name: 'V2 Platform Engineering',
     description: 'Core application redesign, building multi-tenant capabilities, and performance optimizations.',
   }, engLead);
   
-  // Add members manually for team context
   await projectsService.addMember(engineeringProject.id, { userId: eng1.id }, engLead).catch(() => {});
   await projectsService.addMember(engineeringProject.id, { userId: eng2.id }, engLead).catch(() => {});
 
-  console.log('Creating Marketing Project...');
-  const marketingProject = await projectsService.create({
+  const marketingProject = await getOrCreateProject({
     name: 'Q3 Product Launch',
     description: 'Marketing campaigns, SEO strategy, and branding assets for the upcoming product drop.',
   }, marketingDir);
 
   await projectsService.addMember(marketingProject.id, { userId: mkt1.id }, marketingDir).catch(() => {});
 
-  const engBacklogItems = [
+  // --- IDEMPOTENT BACKLOG ITEMS ---
+  const seedBacklogItems = async (items: any[], projectId: string, owner: any) => {
+    const repo = dataSource.getRepository('BacklogItem');
+    for (const item of items) {
+      const exists = await repo.findOne({ where: { title: item.title, projectId } });
+      if (!exists) {
+        console.log(`📋 Creating backlog item: ${item.title}`);
+        await backlogService.create({ ...item, description: `Task description for ${item.title}`, projectId }, owner);
+      }
+    }
+  };
+
+  console.log('Building Engineering Backlogs...');
+  await seedBacklogItems([
     { title: 'Database Indexing', priority: 'high', status: 'todo' },
     { title: 'User Multi-tenant Isolation', priority: 'high', status: 'done' },
     { title: 'GraphQL API Setup', priority: 'medium', status: 'in_progress' },
-  ];
-  
-  const mktBacklogItems = [
+  ], engineeringProject.id, engLead);
+
+  console.log('Building Marketing Backlogs...');
+  await seedBacklogItems([
     { title: 'Social Media Copy Q3', priority: 'high', status: 'todo' },
     { title: 'Ad Spend Allocation', priority: 'medium', status: 'todo' },
-  ];
+  ], marketingProject.id, marketingDir);
 
-  console.log('Building Engineering Backlogs & Sprints...');
-  for (const item of engBacklogItems) {
-    await backlogService.create({
-      title: item.title, description: `Task description for ${item.title}`, priority: item.priority as any, status: item.status as any, projectId: engineeringProject.id,
-    }, engLead);
-  }
+  // --- IDEMPOTENT SPRINTS ---
+  const getOrCreateSprint = async (sprintData: any, owner: any) => {
+    const repo = dataSource.getRepository('Sprint');
+    let sprint = await repo.findOne({ where: { name: sprintData.name, projectId: sprintData.projectId } }) as any;
+    if (!sprint) {
+      console.log(`🏃 Creating sprint: ${sprintData.name}`);
+      sprint = await sprintsService.create(sprintData, owner);
+    }
+    return sprint;
+  };
 
-  const engSprint = await sprintsService.create({
-    name: 'Engineering Sprint 1: Foundation', startDate: new Date(), endDate: new Date(new Date().setDate(new Date().getDate() + 14)), status: 'active', projectId: engineeringProject.id,
+  const engSprint = await getOrCreateSprint({
+    name: 'Engineering Sprint 1: Foundation', 
+    startDate: new Date(), 
+    endDate: new Date(new Date().setDate(new Date().getDate() + 14)), 
+    status: 'active', 
+    projectId: engineeringProject.id,
   }, engLead);
+
+  const mktSprint = await getOrCreateSprint({
+    name: 'Marketing Sprint A', 
+    startDate: new Date(), 
+    endDate: new Date(new Date().setDate(new Date().getDate() + 14)), 
+    status: 'active', 
+    projectId: marketingProject.id,
+  }, marketingDir);
+
+  // --- IDEMPOTENT TASKS ---
+  const seedTasks = async (tasks: any[], owner: any) => {
+    const repo = dataSource.getRepository('Task');
+    const backlogRepo = dataSource.getRepository('BacklogItem');
+    for (const task of tasks) {
+      const exists = await repo.findOne({ where: { title: task.title, sprintId: task.sprintId } });
+      if (!exists) {
+        console.log(`✅ Creating task: ${task.title}`);
+        const backlogItem = await backlogRepo.findOne({ where: { title: task.backlogTitle, projectId: task.projectId } }) as any;
+        await tasksService.create({
+          title: task.title,
+          description: task.description,
+          status: task.status as any,
+          priority: task.priority as any,
+          sprintId: task.sprintId,
+          backlogItemId: backlogItem?.id,
+          assigneeId: task.assigneeId,
+          deadline: new Date()
+        }, owner);
+      }
+    }
+  };
 
   const engBacklog = await backlogService.findAllByProject(engineeringProject.id, engLead);
-  await tasksService.create({
-    title: 'Migrate Neon Database schema', description: 'Truncate logic setup', status: 'done', priority: 'high', sprintId: engSprint.id, backlogItemId: engBacklog[0].id, assigneeId: eng2.id, deadline: new Date()
-  }, engLead);
-  await tasksService.create({
-    title: 'Update React Components', description: 'Add modal to backlog and task lists', status: 'in_progress', priority: 'medium', sprintId: engSprint.id, backlogItemId: engBacklog[0].id, assigneeId: eng1.id, deadline: new Date()
-  }, engLead);
+  await seedTasks([
+    { title: 'Migrate Neon Database schema', backlogTitle: 'Database Indexing', projectId: engineeringProject.id, description: 'Truncate logic setup', status: 'done', priority: 'high', sprintId: engSprint.id, assigneeId: eng2.id },
+    { title: 'Update React Components', backlogTitle: 'Database Indexing', projectId: engineeringProject.id, description: 'Add modal to backlog and task lists', status: 'in_progress', priority: 'medium', sprintId: engSprint.id, assigneeId: eng1.id },
+  ], engLead);
 
+  await seedTasks([
+    { title: 'Post 3 TikTok Videos', backlogTitle: 'Social Media Copy Q3', projectId: marketingProject.id, description: 'Engaging content regarding the V2 Release', status: 'in_progress', priority: 'high', sprintId: mktSprint.id, assigneeId: mkt1.id },
+  ], marketingDir);
 
-  console.log('Building Marketing Backlogs & Sprints...');
-  for (const item of mktBacklogItems) {
-    await backlogService.create({
-      title: item.title, description: `Content execution for ${item.title}`, priority: item.priority as any, status: item.status as any, projectId: marketingProject.id,
-    }, marketingDir);
-  }
-
-  const mktSprint = await sprintsService.create({
-    name: 'Marketing Sprint A', startDate: new Date(), endDate: new Date(new Date().setDate(new Date().getDate() + 14)), status: 'active', projectId: marketingProject.id,
-  }, marketingDir);
-
-  const mktBacklog = await backlogService.findAllByProject(marketingProject.id, marketingDir);
-  await tasksService.create({
-    title: 'Post 3 TikTok Videos', description: 'Engaging content regarding the V2 Release', status: 'in_progress', priority: 'high', sprintId: mktSprint.id, backlogItemId: mktBacklog[0].id, assigneeId: mkt1.id, deadline: new Date()
-  }, marketingDir);
-
-
-  console.log('🌱 Seed Completed Successfully with Team Data!');
+  console.log('🌱 Seed Completed/Verified Successfully!');
 }
 
 export async function bootstrap() {

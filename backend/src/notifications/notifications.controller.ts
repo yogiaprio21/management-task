@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Param, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -15,6 +15,7 @@ export class NotificationsController {
   @Get()
   @ApiOperation({ summary: 'Get all notifications for current user' })
   findAll(@CurrentUser() user: User) {
+    if (!user) throw new UnauthorizedException();
     return this.notificationsService.findAllByUser(user.id);
   }
 
