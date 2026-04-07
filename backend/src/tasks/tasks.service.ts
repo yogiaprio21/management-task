@@ -7,6 +7,7 @@ import { Attachment } from './attachment.entity';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
+import { AuditLog } from '../audit/audit-log.entity';
 
 @Injectable()
 export class TasksService {
@@ -46,15 +47,16 @@ export class TasksService {
       .leftJoinAndSelect('task.assignee', 'assignee')
       .leftJoinAndSelect('task.creator', 'creator')
       .leftJoinAndSelect('task.sprint', 'sprint')
-      .leftJoinAndSelect('sprint.project', 'project')
-      .leftJoinAndSelect('project.members', 'member');
-
-    if (sprintId) {
-      query.where('task.sprintId = :sprintId', { sprintId });
-    }
+      .leftJoinAndSelect('sprint.project', 'project');
 
     if (user.role !== 'admin') {
-      query.andWhere('(project.ownerId = :userId OR member.id = :userId)', { userId: user.id });
+      // Use leftJoin (not select) for checking membership to avoid circular JSON
+      query.leftJoin('project.members', 'member')
+           .where('(project.ownerId = :userId OR member.id = :userId)', { userId: user.id });
+    }
+
+    if (sprintId) {
+      query.andWhere('task.sprintId = :sprintId', { sprintId });
     }
 
     return query.getMany();
@@ -88,6 +90,40 @@ export class TasksService {
 
     if (!isOwner && !isMember && user.role !== 'admin') {
       throw new ForbiddenException('You do not have access to this task');
+    }
+
+    /**
+     * CLEAN CIRCULAR REFERENCES FOR JSON SERIALIZATION
+     * TypeORM loads full entities. If we load Task -> Assignee (User), 
+     * then User entity contains links back to Tasks/Projects, 
+     * creating a circular graph that JSON.stringify cannot handle (500 Error).
+     */
+    const cleanUser = (u: any) => {
+      if (!u) return u;
+      delete u.password;
+      delete u.tasks;
+      delete u.projects;
+      delete u.memberProjects;
+      delete u.backlogItems;
+      delete u.notifications;
+      delete u.dailyReports;
+      return u;
+    };
+
+    cleanUser(task.assignee);
+    cleanUser(task.creator);
+
+    if (task.sprint?.project) {
+        task.sprint.project.members?.forEach(m => cleanUser(m));
+        delete task.sprint.project.members;
+    }
+    if (task.backlogItem?.project) {
+        task.backlogItem.project.members?.forEach(m => cleanUser(m));
+        delete task.backlogItem.project.members;
+    }
+
+    if (task.comments) {
+        task.comments.forEach(c => cleanUser(c.user));
     }
 
     return task;
@@ -140,7 +176,10 @@ export class TasksService {
 
     // RBAC: Admin only (for deletion, per strict interpretation)
     // Adding logic: If the user is the Project Owner (via Sprint->Project), they should be able to delete too.
-    if (user.role !== 'admin' && task.sprint.project.ownerId !== user.id) {
+    const project = task.sprint?.project || task.backlogItem?.project;
+    const isOwner = project?.ownerId === user.id;
+
+    if (user.role !== 'admin' && !isOwner) {
        throw new ForbiddenException('Only admins or project owners can delete tasks');
     }
 
@@ -174,10 +213,21 @@ export class TasksService {
 
   async getActivityHistory(taskId: string, user: User): Promise<any[]> {
     await this.findOne(taskId, user);
-    return this.tasksRepository.manager.getRepository('AuditLog').find({
+    const logs = await this.tasksRepository.manager.getRepository(AuditLog).find({
       where: { entityType: 'Task', entityId: taskId },
       order: { createdAt: 'DESC' },
       relations: ['user']
+    });
+
+    // CLEAN CIRCULAR REFERENCES
+    return logs.map(log => {
+      if (log.user) {
+        delete (log.user as any).password;
+        delete (log.user as any).tasks;
+        delete (log.user as any).projects;
+        delete (log.user as any).memberProjects;
+      }
+      return log;
     });
   }
 }
