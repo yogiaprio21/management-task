@@ -20,12 +20,14 @@ export async function runSeed(app: INestApplicationContext) {
   console.log('🌱 Starting Seed Process...');
 
   let tablesExist = false;
+  let userCount = 0;
   let retries = 5;
   while (retries > 0 && !tablesExist) {
     try {
-      await dataSource.query('SELECT count(*) FROM "users" LIMIT 1');
+      const result = await dataSource.query('SELECT count(*) FROM "users"');
+      userCount = parseInt(result[0].count);
       tablesExist = true;
-      console.log('✅ Database tables detected.');
+      console.log(`✅ Database tables detected. Current user count: ${userCount}`);
     } catch (err: any) {
       console.log(`⏳ Database tables not ready yet. Error: ${err.message}. Retrying in 5s... (${retries} attempts left)`);
       retries--;
@@ -38,8 +40,16 @@ export async function runSeed(app: INestApplicationContext) {
     return;
   }
 
-  if (process.env.FORCE_SEED === 'true') {
-    console.log('🗑️  Cleaning database (Cascade truncate)...');
+  const isForceSeed = process.env.FORCE_SEED === 'true';
+
+  // SKIP SEED IF DATA EXISTS AND NOT FORCED
+  if (userCount > 0 && !isForceSeed) {
+    console.log('✨ Database already seeded (contains users). Skipping seed process to avoid duplicates.');
+    return;
+  }
+
+  if (isForceSeed) {
+    console.log('🗑️  Cleaning database (Cascade truncate) due to FORCE_SEED...');
     try {
       await dataSource.query(`TRUNCATE TABLE "audit_logs", "notifications", "daily_reports", "tasks", "backlog_items", "sprints", "projects", "users" RESTART IDENTITY CASCADE;`);
       // Also potentially clear project members many-to-many junction table:
