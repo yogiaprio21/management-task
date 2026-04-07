@@ -4,7 +4,7 @@ export interface Notification {
   id: string;
   title: string;
   message: string;
-  read: boolean;
+  isRead: boolean;
   createdAt: string;
   userId: string;
 }
@@ -20,6 +20,6 @@ export const markAsRead = async (id: string) => {
 };
 
 export const markAllAsRead = async () => {
-  const response = await api.post('/notifications/read-all');
+  const response = await api.patch('/notifications/read-all');
   return response.data;
 };

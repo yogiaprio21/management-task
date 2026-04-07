@@ -32,6 +32,7 @@ export class TasksService {
     if (savedTask.assigneeId && savedTask.assigneeId !== user.id) {
       this.notificationsGateway.sendNotificationToUser(
         savedTask.assigneeId, 
+        'New Task Assigned',
         `You have been assigned to task: ${savedTask.title}`
       );
     }
@@ -113,6 +114,7 @@ export class TasksService {
     if (taskData.assigneeId && taskData.assigneeId !== task.assigneeId) {
        this.notificationsGateway.sendNotificationToUser(
           taskData.assigneeId,
+          'Task Reassigned',
           `You have been assigned to task: ${updatedTask.title}`
        );
     }

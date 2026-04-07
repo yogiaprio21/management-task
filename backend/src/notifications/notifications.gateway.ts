@@ -22,10 +22,15 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     // Cleanup logic if needed
   }
 
-  sendNotificationToUser(userId: string, message: string) {
+  sendNotificationToUser(userId: string, title: string, message: string) {
     const socketId = this.userSocketsMap.get(userId);
     if (socketId) {
-      this.server.to(socketId).emit('notification', { message, date: new Date() });
+      this.server.to(socketId).emit('notification', { 
+        title, 
+        message, 
+        isRead: false,
+        createdAt: new Date() 
+      });
     }
   }
 }

@@ -17,4 +17,12 @@ export class NotificationsService {
   async findAllByUser(userId: string) {
     return this.notificationsRepository.find({ where: { userId }, order: { createdAt: 'DESC' } });
   }
+
+  async markAsRead(id: string) {
+    return this.notificationsRepository.update(id, { isRead: true });
+  }
+
+  async markAllAsRead(userId: string) {
+    return this.notificationsRepository.update({ userId, isRead: false }, { isRead: true });
+  }
 }
