@@ -100,33 +100,40 @@ export class TasksService {
      */
     const cleanUser = (u: any) => {
       if (!u) return u;
-      delete u.password;
-      delete u.tasks;
-      delete u.projects;
-      delete u.memberProjects;
-      delete u.backlogItems;
-      delete u.notifications;
-      delete u.dailyReports;
-      return u;
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        createdAt: u.createdAt
+      };
     };
 
-    cleanUser(task.assignee);
-    cleanUser(task.creator);
+    const taskData = { ...task };
+    taskData.assignee = cleanUser(task.assignee);
+    taskData.creator = cleanUser(task.creator);
 
-    if (task.sprint?.project) {
-        task.sprint.project.members?.forEach(m => cleanUser(m));
-        delete task.sprint.project.members;
+    if (taskData.sprint?.project) {
+        // Deep copy of project to avoid affecting original
+        taskData.sprint = { ...taskData.sprint };
+        taskData.sprint.project = { ...taskData.sprint.project };
+        delete taskData.sprint.project.members;
     }
-    if (task.backlogItem?.project) {
-        task.backlogItem.project.members?.forEach(m => cleanUser(m));
-        delete task.backlogItem.project.members;
+    
+    if (taskData.backlogItem?.project) {
+        taskData.backlogItem = { ...taskData.backlogItem };
+        taskData.backlogItem.project = { ...taskData.backlogItem.project };
+        delete taskData.backlogItem.project.members;
     }
 
-    if (task.comments) {
-        task.comments.forEach(c => cleanUser(c.user));
+    if (taskData.comments) {
+        taskData.comments = task.comments.map(c => ({
+          ...c,
+          user: cleanUser(c.user)
+        }));
     }
 
-    return task;
+    return taskData as Task;
   }
 
   async update(id: string, taskData: Partial<Task>, user: User): Promise<Task> {
@@ -219,15 +226,18 @@ export class TasksService {
       relations: ['user']
     });
 
-    // CLEAN CIRCULAR REFERENCES
+    // ROBUST CLEAN CIRCULAR REFERENCES
     return logs.map(log => {
-      if (log.user) {
-        delete (log.user as any).password;
-        delete (log.user as any).tasks;
-        delete (log.user as any).projects;
-        delete (log.user as any).memberProjects;
+      const cleanLog = { ...log };
+      if (cleanLog.user) {
+        cleanLog.user = {
+          id: cleanLog.user.id,
+          name: cleanLog.user.name,
+          email: cleanLog.user.email,
+          role: cleanLog.user.role,
+        } as any;
       }
-      return log;
+      return cleanLog;
     });
   }
 }

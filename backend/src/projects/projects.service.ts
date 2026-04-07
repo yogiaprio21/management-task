@@ -32,7 +32,7 @@ export class ProjectsService {
       .leftJoin('project.members', 'member')
       .where('project.ownerId = :userId OR member.id = :userId', { userId: user.id })
       .select([
-        'project.id', 'project.name', 'project.description', 'project.createdAt', 'project.updatedAt',
+        'project.id', 'project.name', 'project.description', 'project.createdAt', 'project.updatedAt', 'project.ownerId',
         'owner.id', 'owner.name', 'owner.email'
       ])
       .getMany();

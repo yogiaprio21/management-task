@@ -97,26 +97,28 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
 
         {/* Tabs */}
         {!isCreating && (
-          <div className="flex border-b dark:border-gray-700 px-6 gap-6">
-            {[
-              { id: 'details', icon: Info, label: 'Details' },
-              { id: 'comments', icon: MessageSquare, label: 'Comments' },
-              { id: 'attachments', icon: Paperclip, label: 'Files' },
-              { id: 'history', icon: History, label: 'History' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as 'details' | 'comments' | 'attachments' | 'history')}
-                className={`flex items-center gap-2 py-4 border-b-2 transition-all font-bold text-sm ${
-                  activeTab === tab.id 
-                    ? 'border-primary text-primary' 
-                    : 'border-transparent text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
+          <div className="flex border-b dark:border-gray-700 px-6 overflow-x-auto scrollbar-hide bg-gray-50/30 dark:bg-gray-800/30">
+            <div className="flex gap-8 min-w-max">
+              {[
+                { id: 'details', icon: Info, label: 'Details' },
+                { id: 'comments', icon: MessageSquare, label: 'Comments' },
+                { id: 'attachments', icon: Paperclip, label: 'Files' },
+                { id: 'history', icon: History, label: 'History' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as 'details' | 'comments' | 'attachments' | 'history')}
+                  className={`flex items-center gap-2 py-4 border-b-2 transition-all font-bold text-sm flex-shrink-0 ${
+                    activeTab === tab.id 
+                      ? 'border-primary text-primary' 
+                      : 'border-transparent text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
