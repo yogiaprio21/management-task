@@ -55,7 +55,8 @@ export async function runSeed(app: INestApplicationContext) {
   if (isForceSeed) {
     console.log('🗑️  Cleaning database (Cascade truncate) due to FORCE_SEED...');
     try {
-      await dataSource.query(`TRUNCATE TABLE "audit_logs", "notifications", "daily_reports", "tasks", "backlog_items", "sprints", "projects", "users" RESTART IDENTITY CASCADE;`);
+      await dataSource.query(`TRUNCATE TABLE "audit_logs", "notifications", "daily_reports", "comments", "attachments", "tasks", "backlog_items", "sprints", "projects", "users" RESTART IDENTITY CASCADE;`);
+      // Also ensure many-to-many junction tables are clean
       await dataSource.query(`TRUNCATE TABLE "project_members" RESTART IDENTITY CASCADE;`).catch(() => {});
       console.log('✅ Database cleaned via FORCE_SEED.');
     } catch (error) {
