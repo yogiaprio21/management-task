@@ -29,6 +29,7 @@ import { Attachment } from './tasks/attachment.entity';
 import { Notification } from './notifications/notification.entity';
 import { DailyReport } from './reports/daily-report.entity';
 import { AuditLog } from './audit/audit-log.entity';
+import { Webhook } from './integrations/webhooks/webhook.entity';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { AuditLog } from './audit/audit-log.entity';
           Notification,
           DailyReport,
           AuditLog,
+          Webhook,
         ],
         synchronize: String(configService.get('DB_SYNCHRONIZE')).toLowerCase() === 'true',
         logging: String(configService.get('DB_LOGGING')).toLowerCase() === 'true',

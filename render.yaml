@@ -5,7 +5,7 @@ services:
     env: node
     rootDir: backend
     buildCommand: npm install && npm run build
-    startCommand: npm run start:prod
+    startCommand: npm run migration:run && npm run start:prod
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -15,7 +15,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: DB_SYNCHRONIZE
-        value: true
+        value: false
       - key: DB_SSL
         value: true
       - key: JWT_SECRET

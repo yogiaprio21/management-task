@@ -1,119 +1,150 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getProjects } from '../api/projects';
-import { getReports } from '../api/reports';
-import { getSprints } from '../api/sprints';
-import { BarChart3, Loader2, Calendar } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { Activity, AlertTriangle, BarChart3, Calendar, CheckCircle2, Loader2, Users } from 'lucide-react';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { getReports, getReportsAnalytics } from '../api/reports';
 import { Card } from '../ui/Card';
+import { PageHeader } from '../ui/PageHeader';
+import { Badge, statusTone } from '../ui/Badge';
+import { EmptyState } from '../ui/EmptyState';
+import ProjectSwitcher from '../components/ProjectSwitcher';
 
 const ReportsDashboard: React.FC = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedProjectId, setSelectedProjectId] = useState('');
 
-  const { data: projects, isLoading: projectsLoading } = useQuery({
-    queryKey: ['projects'],
-    queryFn: getProjects,
-  });
-
-  useEffect(() => {
-    if (projects && projects.length > 0 && !selectedProjectId) {
-      setSelectedProjectId(projects[0].id);
-    }
-  }, [projects, selectedProjectId]);
-
-  const { data: reports, isLoading: reportsLoading } = useQuery({
+  const { data: reports = [], isLoading: reportsLoading } = useQuery({
     queryKey: ['reports', selectedProjectId],
     queryFn: () => getReports(selectedProjectId),
     enabled: !!selectedProjectId,
   });
 
-  const { data: sprints, isLoading: sprintsLoading } = useQuery({
-    queryKey: ['sprints', selectedProjectId],
-    queryFn: () => getSprints(selectedProjectId),
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['reports-analytics', selectedProjectId],
+    queryFn: () => getReportsAnalytics(selectedProjectId),
     enabled: !!selectedProjectId,
   });
 
-  // Mock data for Burn Down and Velocity charts since actual task weight/burndown isn't in API yet
-  const velocityData = sprints?.map((_, idx) => ({
-    name: `Sprint ${idx + 1}`,
-    completed: Math.floor(Math.random() * 20) + 10, // Mock completed points
-    planned: Math.floor(Math.random() * 5) + 20,   // Mock planned points
-  })) || [];
-
-  if (projectsLoading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
-
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-4xl font-extrabold text-slate-900 flex items-center gap-3">
-            <BarChart3 className="w-10 h-10 text-primary" /> Reports & Analytics
-          </h1>
-          <p className="text-slate-500 max-w-2xl text-lg font-medium">Analyze team velocity and track daily updates.</p>
-        </div>
-        <div>
-          <select 
-            value={selectedProjectId}
-            onChange={e => setSelectedProjectId(e.target.value)}
-            className="px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 font-bold shadow-sm"
-          >
-            {projects?.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+    <div className="space-y-8 pb-12">
+      <PageHeader
+        title="Reports & Analytics"
+        description="Track delivery health, sprint velocity, workload, and team updates using live project data."
+        icon={<BarChart3 className="h-5 w-5" />}
+        actions={<ProjectSwitcher value={selectedProjectId} onChange={setSelectedProjectId} />}
+      />
+
+      {!selectedProjectId ? (
+        <EmptyState
+          icon={<BarChart3 className="h-7 w-7" />}
+          title="No project selected"
+          description="Create or select a project to view analytics."
+        />
+      ) : analyticsLoading ? (
+        <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: 'Total Tasks', value: analytics?.summary.totalTasks || 0, icon: Activity, tone: 'blue' },
+              { label: 'Completed', value: analytics?.summary.completedTasks || 0, icon: CheckCircle2, tone: 'green' },
+              { label: 'Active Sprints', value: analytics?.summary.activeSprints || 0, icon: Calendar, tone: 'purple' },
+              { label: 'Overdue', value: analytics?.summary.overdueTasks || 0, icon: AlertTriangle, tone: 'red' },
+            ].map((stat) => (
+              <Card key={stat.label} hover={false} className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">{stat.label}</p>
+                    <p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">{stat.value}</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-100 p-3 text-primary dark:bg-slate-900">
+                    <stat.icon className="h-5 w-5" />
+                  </div>
+                </div>
+              </Card>
             ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="p-6">
-          <h3 className="text-xl font-bold mb-6">Team Velocity</h3>
-           {sprintsLoading ? (
-            <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
-          ) : velocityData.length > 0 ? (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={velocityData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B' }} />
-                  <Tooltip cursor={{ fill: '#F1F5F9' }} />
-                  <Bar dataKey="planned" fill="#CBD5E1" radius={[4, 4, 0, 0]} name="Planned Points" />
-                  <Bar dataKey="completed" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Completed Points" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="h-64 flex items-center justify-center text-slate-400">No sprints to show velocity.</div>
-          )}
-        </Card>
-
-        <Card className="p-6 h-full flex flex-col">
-          <h3 className="text-xl font-bold mb-6">Daily & Weekly Reports</h3>
-          <div className="flex-1 overflow-y-auto pr-2 space-y-4 max-h-[400px]">
-             {reportsLoading ? (
-               <div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary" /></div>
-             ) : reports?.length === 0 ? (
-               <div className="text-center text-slate-400 mt-10">No reports generated yet.</div>
-             ) : (
-               reports?.map(report => (
-                 <div key={report.id} className="p-4 border border-slate-100 rounded-xl bg-slate-50">
-                    <div className="flex items-center gap-2 mb-2">
-                       <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-md ${
-                        report.type === 'daily' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'
-                       }`}>
-                         {report.type}
-                       </span>
-                       <span className="text-xs text-slate-400 flex items-center gap-1">
-                         <Calendar className="w-3 h-3" /> {new Date(report.createdAt).toLocaleDateString()}
-                       </span>
-                    </div>
-                    <p className="text-sm font-medium text-slate-700">{report.content}</p>
-                 </div>
-               ))
-             )}
           </div>
-        </Card>
-      </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card hover={false} className="p-5">
+              <div className="mb-5 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-slate-950 dark:text-white">Team Velocity</h3>
+                <Badge tone="blue">Live data</Badge>
+              </div>
+              {analytics?.velocity.length ? (
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analytics.velocity} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
+                      <Tooltip cursor={{ fill: '#F8FAFC' }} />
+                      <Bar dataKey="planned" fill="#CBD5E1" radius={[4, 4, 0, 0]} name="Planned" />
+                      <Bar dataKey="completed" fill="#2563EB" radius={[4, 4, 0, 0]} name="Completed" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <EmptyState title="No sprint data" description="Create sprints and tasks to generate velocity charts." />
+              )}
+            </Card>
+
+            <Card hover={false} className="p-5">
+              <h3 className="mb-5 text-lg font-bold text-slate-950 dark:text-white">Task Status</h3>
+              <div className="space-y-3">
+                {(analytics?.statusCounts || []).map((item) => (
+                  <div key={item.status} className="flex items-center justify-between rounded-lg border border-slate-100 p-3 dark:border-slate-800">
+                    <Badge tone={statusTone(item.status)}>{item.status.replace('_', ' ')}</Badge>
+                    <span className="text-lg font-bold text-slate-900 dark:text-white">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card hover={false} className="p-5">
+              <div className="mb-5 flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-bold text-slate-950 dark:text-white">Workload</h3>
+              </div>
+              <div className="space-y-3">
+                {(analytics?.workload || []).length ? analytics?.workload.map((item) => (
+                  <div key={item.name} className="rounded-lg border border-slate-100 p-3 dark:border-slate-800">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-semibold text-slate-800 dark:text-slate-100">{item.name}</span>
+                      <span className="text-slate-500">{item.done}/{item.total} done</span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full bg-primary" style={{ width: `${item.total ? (item.done / item.total) * 100 : 0}%` }} />
+                    </div>
+                  </div>
+                )) : <EmptyState title="No workload yet" description="Assign tasks to see workload distribution." />}
+              </div>
+            </Card>
+
+            <Card hover={false} className="p-5">
+              <h3 className="mb-5 text-lg font-bold text-slate-950 dark:text-white">Daily & Weekly Reports</h3>
+              {reportsLoading ? (
+                <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : reports.length ? (
+                <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+                  {reports.map((report) => (
+                    <div key={report.id} className="rounded-lg border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="mb-2 flex items-center gap-2">
+                        <Badge tone={report.type === 'daily' ? 'blue' : 'purple'}>{report.type}</Badge>
+                        <span className="text-xs text-slate-500">{new Date(report.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-300">{report.content}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="No reports yet" description="Publish daily or weekly updates from Project Detail." />
+              )}
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 };

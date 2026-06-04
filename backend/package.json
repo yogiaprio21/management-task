@@ -10,6 +10,8 @@
     "start": "node -r tsconfig-paths/register dist/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
+    "migration:run": "typeorm migration:run -d dist/data-source.js",
+    "migration:revert": "typeorm migration:revert -d dist/data-source.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start:debug": "nest start --debug --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",

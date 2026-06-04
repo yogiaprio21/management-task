@@ -6,9 +6,10 @@ import { Task } from './task.entity';
 import { Comment } from './comment.entity';
 import { Attachment } from './attachment.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { WebhooksModule } from '../integrations/webhooks/webhooks.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Task, Comment, Attachment]), NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Task, Comment, Attachment]), NotificationsModule, WebhooksModule],
   providers: [TasksService],
   controllers: [TasksController],
   exports: [TasksService],

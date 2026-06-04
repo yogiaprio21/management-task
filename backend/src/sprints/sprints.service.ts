@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Sprint } from './sprint.entity';
 import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
+import { WebhooksService } from '../integrations/webhooks/webhooks.service';
 
 @Injectable()
 export class SprintsService {
@@ -11,6 +12,7 @@ export class SprintsService {
     @InjectRepository(Sprint)
     private sprintsRepository: Repository<Sprint>,
     private auditService: AuditService,
+    private webhooksService: WebhooksService,
   ) {}
 
   async create(sprintData: Partial<Sprint>, user: User): Promise<Sprint> {
@@ -64,7 +66,17 @@ export class SprintsService {
 
     await this.sprintsRepository.update(id, sprintData);
     await this.auditService.log('update', 'Sprint', id, user, sprintData);
-    return this.findOne(id, user);
+    const updatedSprint = await this.findOne(id, user);
+
+    if (sprintData.status === 'completed' && sprint.status !== 'completed') {
+      await this.webhooksService.dispatch(updatedSprint.projectId, 'sprint.completed', {
+        title: 'Sprint completed',
+        message: `${user.name} completed "${updatedSprint.name}".`,
+        sprintId: updatedSprint.id,
+      });
+    }
+
+    return updatedSprint;
   }
 
   async remove(id: string, user: User): Promise<void> {

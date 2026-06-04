@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProject, addProjectMember, removeProjectMember } from '../api/projects';
 import { getBacklogItems, createBacklogItem } from '../api/backlog';
-import { getSprints, createSprint } from '../api/sprints';
+import { getSprints, createSprint, updateSprint } from '../api/sprints';
 import { getReports, createReport } from '../api/reports';
 import { getTasks, updateTask, deleteTask } from '../api/tasks';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import TaskModal from '../components/TaskModal';
 import type { 
   CreateBacklogDto, 
@@ -44,6 +45,7 @@ const ProjectDetail: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'backlog' | 'board' | 'reports' | 'members'>('backlog');
   const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<User | null>(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -97,6 +99,15 @@ const ProjectDetail: React.FC = () => {
       toast.success('Sprint created');
     },
     onError: () => toast.error('Failed to create sprint'),
+  });
+
+  const updateSprintMutation = useMutation({
+    mutationFn: ({ sprintId, data }: { sprintId: string; data: Partial<Sprint> }) => updateSprint(sprintId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sprints', id] });
+      toast.success('Sprint updated');
+    },
+    onError: () => toast.error('Failed to update sprint'),
   });
 
   const createReportMutation = useMutation({
@@ -230,6 +241,16 @@ const ProjectDetail: React.FC = () => {
         onSubmit={handleTaskSubmit}
       />
 
+      <ConfirmDialog
+        isOpen={!!memberToRemove}
+        title="Remove member?"
+        description={`${memberToRemove?.name || 'This member'} will lose access to this project. Their existing task history remains available in audit logs.`}
+        confirmLabel="Remove"
+        isLoading={removeMemberMutation.isPending}
+        onClose={() => setMemberToRemove(null)}
+        onConfirm={() => memberToRemove && removeMemberMutation.mutate(memberToRemove.id, { onSuccess: () => setMemberToRemove(null) })}
+      />
+
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
@@ -312,7 +333,7 @@ const ProjectDetail: React.FC = () => {
             tasks={tasks || []}
             isLoading={sprintsLoading || tasksLoading}
             onDragEnd={onDragEnd}
-            onStartSprint={() => toast('Start Sprint feature coming soon!', { icon: '🚀' })}
+            onStartSprint={() => activeSprint && updateSprintMutation.mutate({ sprintId: activeSprint.id, data: { status: 'completed' } })}
             onCreateSprint={(data) => createSprintMutation.mutate({ ...data, projectId: id! })}
             canManageSprint={canManageProject()}
             onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
@@ -333,7 +354,10 @@ const ProjectDetail: React.FC = () => {
             members={project.members || []}
             ownerId={project.ownerId}
             onAdd={(email) => addMemberMutation.mutate(email)}
-            onRemove={(userId) => removeMemberMutation.mutate(userId)}
+            onRemove={(userId) => {
+              const member = project.members.find((item) => item.id === userId);
+              setMemberToRemove(member || null);
+            }}
             canManage={canManageProject()}
             isAdding={addMemberMutation.isPending}
           />
@@ -803,7 +827,7 @@ const MembersView: React.FC<{
               
               {canManage && member.id !== ownerId && (
                 <button 
-                  onClick={() => { if(window.confirm(`Remove ${member.name}?`)) onRemove(member.id); }}
+                  onClick={() => onRemove(member.id)}
                   className="opacity-0 group-hover:opacity-100 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
                 >
                   <Trash2 className="w-5 h-5" />

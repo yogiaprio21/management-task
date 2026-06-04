@@ -6,6 +6,8 @@ export interface Webhook {
   events: string[];
   active: boolean;
   projectId: string;
+  lastStatus?: string;
+  lastTriggeredAt?: string;
 }
 
 export const getWebhooks = async (projectId: string) => {
@@ -15,6 +17,16 @@ export const getWebhooks = async (projectId: string) => {
 
 export const createWebhook = async (data: Omit<Webhook, 'id'>) => {
   const response = await api.post<Webhook>('/webhooks', data);
+  return response.data;
+};
+
+export const updateWebhook = async (id: string, data: Partial<Webhook>) => {
+  const response = await api.patch<Webhook>(`/webhooks/${id}`, data);
+  return response.data;
+};
+
+export const testWebhook = async (id: string) => {
+  const response = await api.post<{ ok: boolean; status: number | string }>(`/webhooks/${id}/test`);
   return response.data;
 };
 

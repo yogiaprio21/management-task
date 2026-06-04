@@ -8,6 +8,7 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuditLog } from '../audit/audit-log.entity';
+import { WebhooksService } from '../integrations/webhooks/webhooks.service';
 
 @Injectable()
 export class TasksService {
@@ -20,7 +21,26 @@ export class TasksService {
     private attachmentsRepository: Repository<Attachment>,
     private notificationsGateway: NotificationsGateway,
     private auditService: AuditService,
+    private webhooksService: WebhooksService,
   ) {}
+
+  private async resolveProjectId(task: Partial<Task>): Promise<string | undefined> {
+    if (task.sprintId) {
+      const sprint = await this.tasksRepository.manager.getRepository('Sprint').findOne({
+        where: { id: task.sprintId },
+      }) as any;
+      return sprint?.projectId;
+    }
+
+    if (task.backlogItemId) {
+      const backlogItem = await this.tasksRepository.manager.getRepository('BacklogItem').findOne({
+        where: { id: task.backlogItemId },
+      }) as any;
+      return backlogItem?.projectId;
+    }
+
+    return undefined;
+  }
 
   async create(taskData: Partial<Task>, user: User): Promise<Task> {
     const task = this.tasksRepository.create({
@@ -31,7 +51,7 @@ export class TasksService {
     
     // Notify assignee
     if (savedTask.assigneeId && savedTask.assigneeId !== user.id) {
-      this.notificationsGateway.sendNotificationToUser(
+      await this.notificationsGateway.sendNotificationToUser(
         savedTask.assigneeId, 
         'New Task Assigned',
         `You have been assigned to task: ${savedTask.title}`
@@ -39,6 +59,16 @@ export class TasksService {
     }
     
     await this.auditService.log('create', 'Task', savedTask.id, user, taskData);
+
+    const projectId = await this.resolveProjectId(savedTask);
+    if (projectId) {
+      await this.webhooksService.dispatch(projectId, 'task.created', {
+        title: 'Task created',
+        message: `${user.name} created "${savedTask.title}".`,
+        taskId: savedTask.id,
+      });
+    }
+
     return savedTask;
   }
 
@@ -167,7 +197,7 @@ export class TasksService {
     
     // Notify if assignee changed or status updated
     if (taskData.assigneeId && taskData.assigneeId !== task.assigneeId) {
-       this.notificationsGateway.sendNotificationToUser(
+       await this.notificationsGateway.sendNotificationToUser(
           taskData.assigneeId,
           'Task Reassigned',
           `You have been assigned to task: ${updatedTask.title}`
@@ -175,6 +205,17 @@ export class TasksService {
     }
 
     await this.auditService.log('update', 'Task', id, user, taskData);
+
+    const projectId = await this.resolveProjectId(updatedTask);
+    if (projectId && taskData.status && taskData.status !== task.status) {
+      await this.webhooksService.dispatch(projectId, 'task.status_changed', {
+        title: 'Task status changed',
+        message: `${user.name} moved "${updatedTask.title}" to ${taskData.status}.`,
+        taskId: updatedTask.id,
+        status: taskData.status,
+      });
+    }
+
     return updatedTask;
   }
 

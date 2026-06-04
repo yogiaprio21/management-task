@@ -10,6 +10,7 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { toast } from 'react-hot-toast';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 const ProductBacklog: React.FC = () => {
   const queryClient = useQueryClient();
@@ -21,6 +22,7 @@ const ProductBacklog: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editPriority, setEditPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [editStatus, setEditStatus] = useState<'todo' | 'in_progress' | 'done'>('todo');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ['projects'],
@@ -213,7 +215,7 @@ const ProductBacklog: React.FC = () => {
                      </div>
                      <div className="flex gap-2 justify-between mt-2">
                        <div>
-                         <Button type="button" variant="secondary" onClick={() => { if(window.confirm('Delete item?')) deleteBacklogMutation.mutate(item.id); }} className="text-red-500 hover:text-red-600 border-red-200"><Trash2 className="w-4 h-4 mr-2" /> Delete</Button>
+                         <Button type="button" variant="secondary" onClick={() => setDeleteId(item.id)} className="text-red-500 hover:text-red-600 border-red-200"><Trash2 className="w-4 h-4 mr-2" /> Delete</Button>
                        </div>
                        <Button type="submit" isLoading={updateBacklogMutation.isPending}>Save Changes</Button>
                      </div>
@@ -278,6 +280,16 @@ const ProductBacklog: React.FC = () => {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteId}
+        title="Delete backlog item?"
+        description="This backlog item will be removed from the queue. Sprint tasks already created from it are not changed."
+        confirmLabel="Delete"
+        isLoading={deleteBacklogMutation.isPending}
+        onClose={() => setDeleteId(null)}
+        onConfirm={() => deleteId && deleteBacklogMutation.mutate(deleteId, { onSuccess: () => setDeleteId(null) })}
+      />
     </div>
   );
 };

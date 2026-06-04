@@ -1,33 +1,41 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
-import Login from './pages/Login';
-import Register from './pages/Register';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import ProjectList from './pages/ProjectList';
-import ProjectDetail from './pages/ProjectDetail';
-import TaskList from './pages/TaskList';
-import UserList from './pages/UserList';
-import SprintBoard from './pages/SprintBoard';
-import ProductBacklog from './pages/ProductBacklog';
-import ReportsDashboard from './pages/ReportsDashboard';
-import AuditLogs from './pages/AuditLogs';
-import SystemHealth from './pages/SystemHealth';
-import Integrations from './pages/Integrations';
 import { PageLoader } from './components/Spinner';
 
-const queryClient = new QueryClient();
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ProjectList = lazy(() => import('./pages/ProjectList'));
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
+const TaskList = lazy(() => import('./pages/TaskList'));
+const UserList = lazy(() => import('./pages/UserList'));
+const SprintBoard = lazy(() => import('./pages/SprintBoard'));
+const ProductBacklog = lazy(() => import('./pages/ProductBacklog'));
+const ReportsDashboard = lazy(() => import('./pages/ReportsDashboard'));
+const AuditLogs = lazy(() => import('./pages/AuditLogs'));
+const SystemHealth = lazy(() => import('./pages/SystemHealth'));
+const Integrations = lazy(() => import('./pages/Integrations'));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) return <PageLoader />;
-  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   
   return <>{children}</>;
 };
@@ -39,27 +47,30 @@ function App() {
         <AuthProvider>
           <SocketProvider>
             <Router>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <Layout />
-                  </ProtectedRoute>
-                }>
-                  <Route index element={<Dashboard />} />
-                  <Route path="projects" element={<ProjectList />} />
-                  <Route path="projects/:id" element={<ProjectDetail />} />
-                  <Route path="sprints" element={<SprintBoard />} />
-                  <Route path="backlog" element={<ProductBacklog />} />
-                  <Route path="reports" element={<ReportsDashboard />} />
-                  <Route path="tasks" element={<TaskList />} />
-                  <Route path="users" element={<UserList />} />
-                  <Route path="admin/audit" element={<AuditLogs />} />
-                  <Route path="admin/health" element={<SystemHealth />} />
-                  <Route path="settings/integrations" element={<Integrations />} />
-                </Route>
-              </Routes>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <Layout />
+                    </ProtectedRoute>
+                  }>
+                    <Route index element={<Dashboard />} />
+                    <Route path="projects" element={<ProjectList />} />
+                    <Route path="projects/:id" element={<ProjectDetail />} />
+                    <Route path="sprints" element={<SprintBoard />} />
+                    <Route path="backlog" element={<ProductBacklog />} />
+                    <Route path="reports" element={<ReportsDashboard />} />
+                    <Route path="tasks" element={<TaskList />} />
+                    <Route path="users" element={<UserList />} />
+                    <Route path="admin/audit" element={<AuditLogs />} />
+                    <Route path="admin/health" element={<SystemHealth />} />
+                    <Route path="settings/integrations" element={<Integrations />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Route>
+                </Routes>
+              </Suspense>
             </Router>
             <Toaster position="top-right" />
           </SocketProvider>

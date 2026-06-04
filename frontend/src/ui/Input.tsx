@@ -1,10 +1,5 @@
 import React from 'react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from './utils';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -17,7 +12,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const errorId = `${id}-error`;
     return (
       <div className="w-full space-y-1.5">
-        {label && <label htmlFor={id} className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">{label}</label>}
+        {label && <label htmlFor={id} className="ml-0.5 text-sm font-semibold text-slate-700 dark:text-slate-300">{label}</label>}
         <div className="relative group">
           {icon && (
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
@@ -31,7 +26,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             aria-describedby={error ? errorId : undefined}
             className={cn(
               'w-full bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-3 outline-none transition-all duration-300',
-              'focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-primary-glass focus:border-primary shadow-subtle',
+              'h-11 rounded-lg bg-white px-3 text-sm focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-primary/10 focus:border-primary shadow-sm',
               'placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium text-slate-900 dark:text-white',
               icon && 'pl-11',
               error && 'border-red-500 focus:ring-red-500/20 focus:border-red-500 bg-red-50/50',
