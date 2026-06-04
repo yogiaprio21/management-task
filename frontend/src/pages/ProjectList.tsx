@@ -10,6 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
+import { DatePicker } from '../ui/DatePicker';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 const ProjectList: React.FC = () => {
   const { user } = useAuth();
@@ -19,6 +21,7 @@ const ProjectList: React.FC = () => {
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [newProjectDeadline, setNewProjectDeadline] = useState('');
   const queryClient = useQueryClient();
+  const { selectedWorkspaceId, selectedWorkspace, workspaces } = useWorkspace();
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ['projects'],
@@ -27,17 +30,18 @@ const ProjectList: React.FC = () => {
       return data;
     },
     select: (data) => {
+      const scoped = selectedWorkspaceId ? data.filter((project) => !project.workspaceId || project.workspaceId === selectedWorkspaceId) : data;
       // Sort projects by deadline (nearest first)
-      return [...data].sort((a, b) => {
+      return [...scoped].sort((a, b) => {
         if (!a.deadline) return 1;
         if (!b.deadline) return -1;
         return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
       });
-    }
+    },
   });
 
   const createMutation = useMutation({
-    mutationFn: async (newProject: { name: string; description: string; deadline?: string }) => {
+    mutationFn: async (newProject: { name: string; description: string; deadline?: string; workspaceId?: string }) => {
       return await api.post('/projects', newProject);
     },
     onSuccess: () => {
@@ -74,7 +78,8 @@ const ProjectList: React.FC = () => {
     createMutation.mutate({ 
       name: newProjectName, 
       description: newProjectDesc,
-      deadline: newProjectDeadline 
+      deadline: newProjectDeadline,
+      workspaceId: selectedWorkspaceId,
     });
   };
 
@@ -94,22 +99,26 @@ const ProjectList: React.FC = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto space-y-10 pb-20">
+    <div className="mx-auto max-w-7xl space-y-6 pb-12">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-6"
+        className="flex flex-col justify-between gap-4 md:flex-row md:items-center"
       >
         <div className="space-y-2">
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Your Projects</h1>
-          <p className="text-slate-500 text-lg font-medium">Manage and organize all your active workspaces.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+            {selectedWorkspace?.name || 'Workspaces'}
+          </h1>
+          <p className="text-base font-medium text-slate-600 dark:text-slate-300">
+            {workspaces.length > 1 ? 'Manage projects inside the selected workspace.' : 'Manage personal and team projects.'}
+          </p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} size="lg" className="gap-2 shadow-primary/20">
+        <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-primary/20" disabled={!selectedWorkspaceId}>
           <Plus className="w-5 h-5" /> New Project
         </Button>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {projects?.map((project, i) => (
           <motion.div
             key={project.id}
@@ -117,15 +126,15 @@ const ProjectList: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.05 }}
           >
-            <Card className="h-full p-8 flex flex-col justify-between group relative overflow-hidden">
-              <div className="space-y-5">
+            <Card className="group flex h-full flex-col justify-between p-5">
+              <div className="space-y-4">
                 <div className="flex justify-between items-start">
-                  <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300">
-                    <Folder className="w-7 h-7" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-md bg-blue-50 text-blue-600 transition-all duration-200 group-hover:bg-primary group-hover:text-white dark:bg-blue-950 dark:text-blue-300">
+                    <Folder className="h-5 w-5" />
                   </div>
                   <div className="flex items-center gap-2">
                     {project.deadline && (
-                      <div className="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-black rounded-lg uppercase tracking-tight flex items-center gap-1">
+                      <div className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-tight text-amber-700 dark:bg-amber-950 dark:text-amber-300">
                         <Clock className="w-3 h-3" />
                         {new Date(project.deadline).toLocaleDateString()}
                       </div>
@@ -133,7 +142,7 @@ const ProjectList: React.FC = () => {
                     {canDelete(project) && (
                       <button 
                         onClick={() => setDeleteConfirmOpen(project.id)}
-                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                        className="rounded-md p-2 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -142,15 +151,15 @@ const ProjectList: React.FC = () => {
                 </div>
                 
                 <div>
-                  <h3 className="text-xl font-extrabold text-slate-800 group-hover:text-primary transition-colors line-clamp-1">{project.name}</h3>
-                  <p className="text-slate-500 mt-2 line-clamp-3 font-medium text-sm leading-relaxed">
+                  <h3 className="line-clamp-1 text-lg font-bold text-slate-900 transition-colors group-hover:text-primary dark:text-slate-50">{project.name}</h3>
+                  <p className="mt-2 line-clamp-3 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
                     {project.description || 'No description provided for this project.'}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-400">
+              <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                   <Calendar className="w-4 h-4" />
                   <span className="text-xs font-bold uppercase tracking-wider">
                     {new Date(project.updatedAt).toLocaleDateString()}
@@ -167,11 +176,11 @@ const ProjectList: React.FC = () => {
         ))}
 
         {projects?.length === 0 && (
-          <div className="col-span-full py-32 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] text-center">
-            <Layout className="w-20 h-20 text-slate-200 mx-auto mb-6" />
-            <h3 className="text-2xl font-black text-slate-900 mb-2">Workspace Empty</h3>
-            <p className="text-slate-500 mb-10 font-medium text-lg max-w-md mx-auto">Create a new project to start collaborating with your team and tracking progress.</p>
-            <Button onClick={() => setIsModalOpen(true)} size="lg" className="h-14 px-10 text-lg">Create First Project</Button>
+          <div className="col-span-full rounded-lg border border-dashed border-slate-200 bg-slate-50 py-20 text-center dark:border-slate-700 dark:bg-slate-900">
+            <Layout className="mx-auto mb-6 h-14 w-14 text-slate-300 dark:text-slate-600" />
+            <h3 className="mb-2 text-2xl font-bold text-slate-900 dark:text-slate-50">Workspace Empty</h3>
+            <p className="mx-auto mb-8 max-w-md text-base font-medium text-slate-600 dark:text-slate-300">Create a project to start separating personal work and team collaboration.</p>
+            <Button onClick={() => setIsModalOpen(true)}>Create First Project</Button>
           </div>
         )}
       </div>
@@ -181,20 +190,20 @@ const ProjectList: React.FC = () => {
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-md">
-              <Card className="p-8 md:p-10 shadow-2xl border-none card-gradient">
+              <Card className="border-none p-6 shadow-2xl md:p-8">
                 <div className="flex justify-between items-start mb-8">
                   <div>
-                    <h2 className="text-2xl font-black text-slate-900">New Project</h2>
-                    <p className="text-slate-500 text-sm font-medium">Define your project workspace</p>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-50">New Project</h2>
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Create inside {selectedWorkspace?.name || 'selected workspace'}</p>
                   </div>
-                  <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors"><X className="w-6 h-6 text-slate-400" /></button>
+                  <button onClick={() => setIsModalOpen(false)} className="rounded-md p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"><X className="h-5 w-5 text-slate-400" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <Input label="Project Name" required placeholder="Project Name" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} autoFocus />
-                  <Input label="Target Deadline" type="date" value={newProjectDeadline} onChange={e => setNewProjectDeadline(e.target.value)} />
+                  <DatePicker id="project-deadline" label="Target Deadline" value={newProjectDeadline} onChange={setNewProjectDeadline} />
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-slate-700">Description</label>
-                    <textarea className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium text-slate-700 transition-all min-h-[120px]" placeholder="Description" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} />
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Description</label>
+                    <textarea className="min-h-[120px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50" placeholder="Description" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} />
                   </div>
                   <div className="flex gap-3 pt-4">
                     <Button type="submit" className="flex-1 h-12 text-base font-bold shadow-lg" isLoading={createMutation.isPending}>Create Project</Button>
@@ -210,11 +219,11 @@ const ProjectList: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-sm">
               <Card className="p-8 text-center border-none shadow-2xl">
-                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-lg bg-red-50 text-red-500 dark:bg-red-950">
                   <Trash2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 mb-2">Delete Project?</h3>
-                <p className="text-slate-500 font-medium mb-8">This action cannot be undone. All tasks and data will be permanently removed.</p>
+                <h3 className="mb-2 text-xl font-bold text-slate-900 dark:text-slate-50">Delete Project?</h3>
+                <p className="mb-8 font-medium text-slate-600 dark:text-slate-300">This action cannot be undone. All tasks and data will be permanently removed.</p>
                 <div className="flex gap-3">
                   <Button variant="danger" className="flex-1" onClick={() => handleDelete(deleteConfirmOpen)} isLoading={deleteMutation.isPending}>Delete</Button>
                   <Button variant="secondary" className="flex-1" onClick={() => setDeleteConfirmOpen(null)}>Cancel</Button>

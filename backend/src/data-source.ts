@@ -11,6 +11,8 @@ import { Notification } from './notifications/notification.entity';
 import { DailyReport } from './reports/daily-report.entity';
 import { AuditLog } from './audit/audit-log.entity';
 import { Webhook } from './integrations/webhooks/webhook.entity';
+import { Workspace } from './workspaces/workspace.entity';
+import { WorkspaceMember } from './workspaces/workspace-member.entity';
 
 export default new DataSource({
   type: 'postgres',
@@ -28,6 +30,8 @@ export default new DataSource({
     DailyReport,
     AuditLog,
     Webhook,
+    Workspace,
+    WorkspaceMember,
   ],
   migrations: ['dist/migrations/*.js'],
   synchronize: false,

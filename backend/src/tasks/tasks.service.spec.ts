@@ -9,6 +9,7 @@ import { AuditService } from '../audit/audit.service';
 import { User } from '../users/user.entity';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { WebhooksService } from '../integrations/webhooks/webhooks.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 
 const mockRepository = () => ({
   create: jest.fn(),
@@ -43,6 +44,10 @@ const mockWebhooksService = () => ({
   dispatch: jest.fn(),
 });
 
+const mockWorkspacesService = () => ({
+  assertUserInWorkspace: jest.fn(),
+});
+
 describe('TasksService', () => {
   let service: TasksService;
   let taskRepo: any;
@@ -65,6 +70,7 @@ describe('TasksService', () => {
         { provide: NotificationsGateway, useFactory: mockNotificationsGateway },
         { provide: AuditService, useFactory: mockAuditService },
         { provide: WebhooksService, useFactory: mockWebhooksService },
+        { provide: WorkspacesService, useFactory: mockWorkspacesService },
       ],
     }).compile();
 

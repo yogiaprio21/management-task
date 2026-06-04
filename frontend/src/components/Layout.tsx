@@ -26,6 +26,8 @@ import { useTheme } from '../context/ThemeContext';
 import Logo from './Logo';
 import NotificationBell from './notifications/NotificationBell';
 import { Badge } from '../ui/Badge';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 type NavItem = {
   name: string;
@@ -40,6 +42,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
     label: 'Workspace',
     items: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { name: 'Workspaces', href: '/workspaces', icon: FolderKanban },
       { name: 'Projects', href: '/projects', icon: FolderKanban },
     ],
   },
@@ -74,6 +77,7 @@ const Layout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { selectedWorkspaceId } = useWorkspace();
 
   const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
@@ -81,7 +85,7 @@ const Layout: React.FC = () => {
     enabled: !!user,
   });
 
-  const hasProjects = projects.length > 0;
+  const hasProjects = projects.some((project) => !selectedWorkspaceId || !project.workspaceId || project.workspaceId === selectedWorkspaceId);
 
   const visibleGroups = useMemo(
     () =>
@@ -100,10 +104,10 @@ const Layout: React.FC = () => {
   };
 
   const renderNav = (isMobile = false) => (
-    <nav className="space-y-6">
+    <nav className="space-y-5">
       {visibleGroups.map((group) => (
         <div key={group.label} className="space-y-2">
-          <p className="px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{group.label}</p>
+          <p className="px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{group.label}</p>
           <div className="space-y-1">
             {group.items.map((item) => {
               const isActive = item.href === '/' ? location.pathname === '/' : location.pathname.startsWith(item.href);
@@ -136,10 +140,10 @@ const Layout: React.FC = () => {
                   to={item.href}
                   onClick={() => isMobile && setMobileMenuOpen(false)}
                   className={clsx(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition',
+                    'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition',
                     isActive
                       ? 'bg-primary text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white',
+                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white',
                   )}
                 >
                   {content}
@@ -182,10 +186,14 @@ const Layout: React.FC = () => {
       )}
 
       <aside className="hidden w-72 flex-shrink-0 border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 md:flex md:flex-col">
-        <div className="flex h-20 items-center justify-center border-b border-slate-200 px-6 dark:border-slate-800">
+        <div className="flex h-16 items-center border-b border-slate-200 px-5 dark:border-slate-800">
           <Link to="/" className="flex items-center gap-2">
             <Logo size={34} />
           </Link>
+        </div>
+
+        <div className="border-b border-slate-200 px-4 py-4 dark:border-slate-800">
+          <WorkspaceSwitcher />
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-5">
@@ -193,8 +201,8 @@ const Layout: React.FC = () => {
         </div>
 
         <div className="border-t border-slate-200 p-4 dark:border-slate-800">
-          <div className="mb-3 flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 font-bold text-primary">
+          <div className="mb-3 flex items-center gap-3 rounded-md bg-slate-50 p-3 dark:bg-slate-900">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 font-bold text-primary">
               {user?.name?.charAt(0) || 'U'}
             </div>
             <div className="min-w-0 flex-1">

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, KanbanSquare, Lock, Mail, ShieldCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { login as loginApi } from '../api/auth';
@@ -14,7 +14,6 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showDemo, setShowDemo] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const { login } = useAuth();
@@ -43,37 +42,45 @@ const Login: React.FC = () => {
     }
   };
 
-  const setDemo = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('password123');
-    setSubmitted(false);
-  };
-
   return (
-    <div className="grid min-h-screen bg-slate-50 lg:grid-cols-[1fr_480px]">
-      <section className="hidden bg-slate-950 px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <Logo size={42} />
-        <div className="max-w-xl">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.25em] text-blue-200">TaskFlow Workspace</p>
-          <h1 className="text-5xl font-bold leading-tight tracking-tight">Manage individual work and team delivery from one clean board.</h1>
-          <p className="mt-6 text-lg leading-8 text-slate-300">
-            A portfolio-ready project management system with RBAC, audit logs, sprint planning, reports, notifications, and integrations.
-          </p>
-        </div>
-        <div className="grid grid-cols-3 gap-3 text-sm text-slate-300">
-          {['Scrum board', 'Audit trail', 'Discord webhooks'].map((item) => (
-            <div key={item} className="rounded-lg border border-white/10 bg-white/5 p-3 font-semibold">{item}</div>
-          ))}
-        </div>
-      </section>
+    <div className="min-h-screen bg-slate-100 px-4 py-8 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl gap-6 lg:grid-cols-[1fr_430px] lg:items-stretch">
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:p-8 lg:flex lg:flex-col lg:justify-between">
+          <Logo size={42} />
+          <div className="mt-10 max-w-2xl lg:mt-0">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+              <ShieldCheck className="h-4 w-4" />
+              Workspace access control
+            </div>
+            <h1 className="text-4xl font-bold leading-tight tracking-tight md:text-5xl">
+              Kelola pekerjaan personal dan tim dalam workspace yang terpisah.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 dark:text-slate-300">
+              TaskFlow menggabungkan project, backlog, sprint board, task pribadi, audit log, dan integrasi webhook dalam satu produk portfolio yang rapi dan aman.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-3 md:grid-cols-3">
+            {[
+              ['Workspace', 'Personal dan team scope'],
+              ['Kanban', 'Sprint dan task tracking'],
+              ['Audit', 'Riwayat perubahan jelas'],
+            ].map(([title, text]) => (
+              <div key={title} className="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+                <KanbanSquare className="mb-3 h-5 w-5 text-primary" />
+                <p className="font-bold">{title}</p>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
-      <section className="flex items-center justify-center px-4 py-10">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
-          <Card hover={false} className="p-6 md:p-8">
-            <div className="mb-8 flex flex-col items-center text-center">
-              <Logo size={56} showText={false} />
-              <h2 className="mt-5 text-2xl font-bold text-slate-950">Sign in</h2>
-              <p className="mt-2 text-sm text-slate-500">Continue to your planning workspace.</p>
+        <section className="flex items-center justify-center">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full">
+            <Card hover={false} className="p-6 md:p-8">
+              <div className="mb-8">
+                <Logo size={44} showText={false} />
+                <h2 className="mt-5 text-2xl font-bold text-slate-950 dark:text-slate-50">Sign in</h2>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Continue to your planning workspace.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
@@ -105,7 +112,7 @@ const Login: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword((value) => !value)}
-                  className="absolute right-2 top-8 rounded-md p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  className="absolute right-2 top-8 rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -120,26 +127,14 @@ const Login: React.FC = () => {
 
             <div className="mt-6 flex items-center justify-between text-sm">
               <Link to="/register" className="font-semibold text-primary hover:underline">Create account</Link>
-              <button type="button" onClick={() => setShowDemo((value) => !value)} className="font-semibold text-slate-500 hover:text-slate-900">
-                Demo credentials
-              </button>
+              <Link to="/preview" className="font-semibold text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white">
+                Preview
+              </Link>
             </div>
-
-            {showDemo && (
-              <div className="mt-5 grid gap-2 border-t border-slate-100 pt-5">
-                <button type="button" onClick={() => setDemo('admin@example.com')} className="rounded-lg border border-slate-200 p-3 text-left text-sm hover:bg-slate-50">
-                  <span className="font-bold text-slate-800">Admin</span>
-                  <span className="ml-2 text-slate-500">admin@example.com</span>
-                </button>
-                <button type="button" onClick={() => setDemo('manager@example.com')} className="rounded-lg border border-slate-200 p-3 text-left text-sm hover:bg-slate-50">
-                  <span className="font-bold text-slate-800">Manager</span>
-                  <span className="ml-2 text-slate-500">manager@example.com</span>
-                </button>
-              </div>
-            )}
           </Card>
         </motion.div>
       </section>
+      </div>
     </div>
   );
 };

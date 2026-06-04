@@ -5,6 +5,7 @@ import { getUsers } from '../api/users';
 import { addAttachment, addComment, getTaskHistory, getTask } from '../api/tasks';
 import { X, MessageSquare, Paperclip, History, Info, Send, Plus, File, ExternalLink } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { DatePicker } from '../ui/DatePicker';
 import { toast } from 'react-hot-toast';
 import type { Task, CreateTaskDto, UpdateTaskDto, Comment, Attachment, AuditLog } from '../types';
 
@@ -94,7 +95,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-gray-800">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
           <div>
@@ -212,16 +213,13 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Deadline</label>
-                  <input
-                    type="date"
-                    disabled={!canEditDetails}
-                    value={formData.deadline}
-                    onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none font-bold"
-                  />
-                </div>
+                <DatePicker
+                  id="task-deadline"
+                  label="Deadline"
+                  disabled={!canEditDetails}
+                  value={formData.deadline}
+                  onChange={(deadline) => setFormData({ ...formData, deadline })}
+                />
               </div>
             </form>
           )}
@@ -237,7 +235,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
                       <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-[10px]">
                         {c.user?.name.charAt(0)}
                       </div>
-                      <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-2xl rounded-tl-none">
+                      <div className="flex-1 rounded-lg rounded-tl-none bg-gray-50 p-3 dark:bg-gray-700/50">
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-xs font-black text-gray-700 dark:text-gray-200">{c.user?.name}</span>
                           <span className="text-[10px] text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</span>

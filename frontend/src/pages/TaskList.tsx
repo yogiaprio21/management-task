@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasks, createTask, updateTask, deleteTask } from '../api/tasks';
+import { getSprints } from '../api/sprints';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Search, Filter, Trash2, Edit2, Calendar, CheckSquare } from 'lucide-react';
 import TaskModal from '../components/TaskModal';
@@ -12,6 +13,7 @@ import { Skeleton } from '../components/Skeleton';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Button } from '../ui/Button';
 import { PageHeader } from '../ui/PageHeader';
+import ProjectSwitcher from '../components/ProjectSwitcher';
 
 const TaskList: React.FC = () => {
   const { user } = useAuth();
@@ -23,11 +25,20 @@ const TaskList: React.FC = () => {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<'me' | 'all'>('me');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => getTasks(''), // Fetch all tasks
   });
+
+  const { data: sprints = [] } = useQuery({
+    queryKey: ['sprints', selectedProjectId],
+    queryFn: () => getSprints(selectedProjectId),
+    enabled: !!selectedProjectId,
+  });
+
+  const activeSprint = sprints.find((sprint) => sprint.status === 'active');
 
   const createMutation = useMutation({
     mutationFn: createTask,
@@ -73,7 +84,11 @@ const TaskList: React.FC = () => {
   }, [tasks, search, statusFilter, priorityFilter, assigneeFilter, user?.id]);
 
   const handleCreate = (data: CreateTaskDto | UpdateTaskDto) => {
-    createMutation.mutate(data as CreateTaskDto);
+    if (!activeSprint) {
+      toast.error('Create or activate a sprint before creating a task');
+      return;
+    }
+    createMutation.mutate({ ...(data as CreateTaskDto), sprintId: activeSprint.id });
   };
 
   const handleUpdate = (data: CreateTaskDto | UpdateTaskDto) => {
@@ -87,6 +102,10 @@ const TaskList: React.FC = () => {
   };
 
   const openCreateModal = () => {
+    if (!activeSprint) {
+      toast.error('Select a project with an active sprint first');
+      return;
+    }
     setEditingTask(undefined);
     setIsModalOpen(true);
   };
@@ -133,7 +152,8 @@ const TaskList: React.FC = () => {
         )}
       />
 
-      <div className="flex flex-col md:flex-row gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="surface-panel flex flex-col gap-4 p-4 md:flex-row">
+        <ProjectSwitcher value={selectedProjectId} onChange={setSelectedProjectId} label="Project scope" />
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
@@ -144,7 +164,7 @@ const TaskList: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
         </div>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-3">
           <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg flex items-center">
             <button 
               onClick={() => setAssigneeFilter('me')}

@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { WorkspaceProvider } from './context/WorkspaceContext';
 import Layout from './components/Layout';
 import { PageLoader } from './components/Spinner';
 
@@ -21,6 +22,7 @@ const ReportsDashboard = lazy(() => import('./pages/ReportsDashboard'));
 const AuditLogs = lazy(() => import('./pages/AuditLogs'));
 const SystemHealth = lazy(() => import('./pages/SystemHealth'));
 const Integrations = lazy(() => import('./pages/Integrations'));
+const Preview = lazy(() => import('./pages/Preview'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,35 +47,39 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <SocketProvider>
-            <Router>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/" element={
-                    <ProtectedRoute>
-                      <Layout />
-                    </ProtectedRoute>
-                  }>
-                    <Route index element={<Dashboard />} />
-                    <Route path="projects" element={<ProjectList />} />
-                    <Route path="projects/:id" element={<ProjectDetail />} />
-                    <Route path="sprints" element={<SprintBoard />} />
-                    <Route path="backlog" element={<ProductBacklog />} />
-                    <Route path="reports" element={<ReportsDashboard />} />
-                    <Route path="tasks" element={<TaskList />} />
-                    <Route path="users" element={<UserList />} />
-                    <Route path="admin/audit" element={<AuditLogs />} />
-                    <Route path="admin/health" element={<SystemHealth />} />
-                    <Route path="settings/integrations" element={<Integrations />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Route>
-                </Routes>
-              </Suspense>
-            </Router>
-            <Toaster position="top-right" />
-          </SocketProvider>
+          <WorkspaceProvider>
+            <SocketProvider>
+              <Router>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/preview" element={<Preview />} />
+                    <Route path="/" element={
+                      <ProtectedRoute>
+                        <Layout />
+                      </ProtectedRoute>
+                    }>
+                      <Route index element={<Dashboard />} />
+                      <Route path="workspaces" element={<ProjectList />} />
+                      <Route path="projects" element={<ProjectList />} />
+                      <Route path="projects/:id" element={<ProjectDetail />} />
+                      <Route path="sprints" element={<SprintBoard />} />
+                      <Route path="backlog" element={<ProductBacklog />} />
+                      <Route path="reports" element={<ReportsDashboard />} />
+                      <Route path="tasks" element={<TaskList />} />
+                      <Route path="users" element={<UserList />} />
+                      <Route path="admin/audit" element={<AuditLogs />} />
+                      <Route path="admin/health" element={<SystemHealth />} />
+                      <Route path="settings/integrations" element={<Integrations />} />
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Route>
+                  </Routes>
+                </Suspense>
+              </Router>
+              <Toaster position="top-right" />
+            </SocketProvider>
+          </WorkspaceProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

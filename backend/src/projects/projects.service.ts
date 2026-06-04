@@ -6,6 +6,7 @@ import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { MailService } from '../integrations/mail/mail.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 
 @Injectable()
 export class ProjectsService {
@@ -16,40 +17,56 @@ export class ProjectsService {
     private usersRepository: Repository<User>,
     private auditService: AuditService,
     private mailService: MailService,
+    private workspacesService: WorkspacesService,
   ) {}
 
   async create(projectData: Partial<Project>, user: User): Promise<Project> {
-    const project = this.projectsRepository.create({ ...projectData, owner: user, members: [user] });
+    const workspace = projectData.workspaceId
+      ? await this.workspacesService.findOne(projectData.workspaceId, user)
+      : await this.workspacesService.ensurePersonalWorkspace(user);
+
+    await this.workspacesService.assertCanManage(workspace.id, user);
+
+    const project = this.projectsRepository.create({ ...projectData, workspaceId: workspace.id, owner: user, members: [user] });
     const savedProject = await this.projectsRepository.save(project);
-    await this.auditService.log('create', 'Project', savedProject.id, user, projectData);
+    await this.auditService.log('create', 'Project', savedProject.id, user, { ...projectData, workspaceId: workspace.id });
     return savedProject;
   }
 
   async findAll(user: User): Promise<Project[]> {
-    // Only return projects where user is owner OR a member
+    // Only return projects where user is a workspace member, project owner, or legacy project member.
     return this.projectsRepository.createQueryBuilder('project')
       .leftJoinAndSelect('project.owner', 'owner')
       .leftJoin('project.members', 'member')
-      .where('project.ownerId = :userId OR member.id = :userId', { userId: user.id })
+      .leftJoin('project.workspace', 'workspace')
+      .leftJoin('workspace.members', 'workspaceMember')
+      .where(
+        user.role === 'admin'
+          ? '1 = 1'
+          : '(project.ownerId = :userId OR member.id = :userId OR workspaceMember.userId = :userId)',
+        { userId: user.id },
+      )
       .select([
-        'project.id', 'project.name', 'project.description', 'project.createdAt', 'project.updatedAt', 'project.ownerId',
+        'project.id', 'project.name', 'project.description', 'project.createdAt', 'project.updatedAt', 'project.ownerId', 'project.workspaceId',
         'owner.id', 'owner.name', 'owner.email'
       ])
+      .orderBy('project.createdAt', 'DESC')
       .getMany();
   }
 
   async findOne(id: string, user: User): Promise<Project> {
     const project = await this.projectsRepository.findOne({ 
       where: { id }, 
-      relations: ['owner', 'members', 'sprints', 'backlogItems'] 
+      relations: ['owner', 'members', 'sprints', 'backlogItems', 'workspace', 'workspace.members', 'workspace.members.user'] 
     });
     
     if (!project) throw new NotFoundException('Project not found');
 
     const isMember = project.members.some(m => m.id === user.id);
+    const isWorkspaceMember = project.workspace?.members?.some(m => m.userId === user.id);
     const isOwner = project.ownerId === user.id;
 
-    if (!isOwner && !isMember && user.role !== 'admin') {
+    if (!isOwner && !isMember && !isWorkspaceMember && user.role !== 'admin') {
       throw new ForbiddenException('You do not have access to this project');
     }
 
@@ -85,6 +102,9 @@ export class ProjectsService {
 
     project.members.push(userToAdd);
     const savedProject = await this.projectsRepository.save(project);
+    if (project.workspaceId) {
+      await this.workspacesService.addMember(project.workspaceId, { userId: userToAdd.id, role: 'member' }, currentUser).catch(() => undefined);
+    }
     
     // Send notification email to existing user
     await this.mailService.sendProjectJoinNotification(userToAdd.email, project.name, currentUser.name);

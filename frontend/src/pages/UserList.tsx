@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getUsers, updateUser, deleteUser } from '../api/users';
-import type { User } from '../types';
-import { Trash2, UserCog, Shield, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { addWorkspaceMember, removeWorkspaceMember } from '../api/workspaces';
+import type { User, WorkspaceMember } from '../types';
+import { Trash2, UserCog, Shield, Check, X, ChevronLeft, ChevronRight, UserPlus, Users } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 const UserList: React.FC = () => {
   const queryClient = useQueryClient();
@@ -13,7 +17,9 @@ const UserList: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<User['role']>('user');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [memberEmail, setMemberEmail] = useState('');
   const limit = 10;
+  const { selectedWorkspace, selectedWorkspaceId } = useWorkspace();
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users', page],
@@ -46,6 +52,25 @@ const UserList: React.FC = () => {
     }
   });
 
+  const addMemberMutation = useMutation({
+    mutationFn: () => addWorkspaceMember(selectedWorkspaceId, { email: memberEmail, role: 'member' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      setMemberEmail('');
+      toast.success('Workspace member added');
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Failed to add workspace member'),
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: (userId: string) => removeWorkspaceMember(selectedWorkspaceId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      toast.success('Workspace member removed');
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Failed to remove workspace member'),
+  });
+
   const handleUpdateRole = (id: string) => {
     updateMutation.mutate({ id, role: selectedRole });
   };
@@ -56,17 +81,89 @@ const UserList: React.FC = () => {
 
   if (isLoading) return <div className="p-8 text-center text-gray-500">Loading users...</div>;
 
+  const workspaceMemberColumns: Array<DataTableColumn<WorkspaceMember>> = [
+    {
+      key: 'member',
+      header: 'Member',
+      cell: (member) => (
+        <div>
+          <p className="font-semibold text-slate-900 dark:text-slate-50">{member.user?.name || 'Unknown user'}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{member.user?.email}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'role',
+      header: 'Workspace role',
+      cell: (member) => <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-bold capitalize text-blue-700 dark:bg-blue-950 dark:text-blue-300">{member.role}</span>,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      cell: (member) => (
+        <div className="text-right">
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={member.role === 'owner' || removeMemberMutation.isPending}
+            onClick={() => removeMemberMutation.mutate(member.userId)}
+            className="text-red-600"
+          >
+            <Trash2 className="h-4 w-4" />
+            Remove
+          </Button>
+        </div>
+      ),
+      className: 'text-right',
+    },
+  ];
+
   return (
-    <div className="p-6 max-w-7xl mx-auto pb-24">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+    <div className="mx-auto max-w-7xl space-y-6 pb-12">
+      <div>
+        <h1 className="flex items-center gap-3 text-3xl font-bold text-slate-900 dark:text-slate-50">
           <UserCog className="w-8 h-8 text-primary" />
-          User Management
+          Users & Members
         </h1>
-        <p className="text-gray-500 mt-2">Manage user access and roles within the system.</p>
+        <p className="mt-2 text-slate-600 dark:text-slate-300">Manage system users and workspace access separately.</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <section className="surface-panel p-4">
+        <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-50">
+              <Users className="h-5 w-5 text-primary" />
+              {selectedWorkspace?.name || 'Workspace'} Members
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">Only these members can access projects inside this workspace.</p>
+          </div>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (memberEmail.trim()) addMemberMutation.mutate();
+            }}
+            className="flex flex-col gap-2 sm:flex-row"
+          >
+            <Input className="min-w-[260px]" type="email" placeholder="member@example.com" value={memberEmail} onChange={(event) => setMemberEmail(event.target.value)} />
+            <Button type="submit" isLoading={addMemberMutation.isPending} disabled={!selectedWorkspaceId || !memberEmail.trim()}>
+              <UserPlus className="h-4 w-4" />
+              Add member
+            </Button>
+          </form>
+        </div>
+        <DataTable
+          rows={selectedWorkspace?.members || []}
+          columns={workspaceMemberColumns}
+          getRowKey={(member) => member.id}
+          empty="No members in this workspace."
+        />
+      </section>
+
+      <section className="surface-panel overflow-hidden">
+        <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">System Users</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Admin-only account and role management.</p>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -193,7 +290,7 @@ const UserList: React.FC = () => {
             </Button>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

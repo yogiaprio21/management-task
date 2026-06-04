@@ -5,6 +5,28 @@ export interface User {
   role: 'admin' | 'manager' | 'user';
 }
 
+export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer';
+
+export interface WorkspaceMember {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: WorkspaceRole;
+  user?: User;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'personal' | 'team';
+  ownerId?: string;
+  members: WorkspaceMember[];
+  projects?: Project[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -12,6 +34,8 @@ export interface Project {
   ownerId: string;
   owner?: User;
   members: User[];
+  workspaceId?: string;
+  workspace?: Workspace;
   deadline?: string;
   createdAt: string;
   updatedAt: string;
@@ -124,6 +148,7 @@ export interface CreateProjectDto {
   name: string;
   description: string;
   deadline?: string;
+  workspaceId?: string;
 }
 
 export type UpdateProjectDto = Partial<CreateProjectDto>;

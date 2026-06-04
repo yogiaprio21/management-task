@@ -17,6 +17,7 @@ import { MailModule } from './integrations/mail/mail.module';
 import { WebhooksModule } from './integrations/webhooks/webhooks.module';
 import { AuditModule } from './audit/audit.module';
 import { HealthModule } from './health/health.module';
+import { WorkspacesModule } from './workspaces/workspaces.module';
 
 // Entities
 import { User } from './users/user.entity';
@@ -30,6 +31,8 @@ import { Notification } from './notifications/notification.entity';
 import { DailyReport } from './reports/daily-report.entity';
 import { AuditLog } from './audit/audit-log.entity';
 import { Webhook } from './integrations/webhooks/webhook.entity';
+import { Workspace } from './workspaces/workspace.entity';
+import { WorkspaceMember } from './workspaces/workspace-member.entity';
 
 @Module({
   imports: [
@@ -65,6 +68,8 @@ import { Webhook } from './integrations/webhooks/webhook.entity';
           DailyReport,
           AuditLog,
           Webhook,
+          Workspace,
+          WorkspaceMember,
         ],
         synchronize: String(configService.get('DB_SYNCHRONIZE')).toLowerCase() === 'true',
         logging: String(configService.get('DB_LOGGING')).toLowerCase() === 'true',
@@ -83,6 +88,7 @@ import { Webhook } from './integrations/webhooks/webhook.entity';
     WebhooksModule,
     AuditModule,
     HealthModule,
+    WorkspacesModule,
   ],
   providers: [
     {

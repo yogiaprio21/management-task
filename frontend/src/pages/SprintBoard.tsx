@@ -90,16 +90,16 @@ const SprintBoard: React.FC = () => {
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-4xl font-extrabold text-slate-900 flex items-center gap-3">
+          <h1 className="flex items-center gap-3 text-3xl font-bold text-slate-900 dark:text-slate-50">
             <KanbanSquare className="w-10 h-10 text-primary" /> Active Sprint Board
           </h1>
-          <p className="text-slate-500 max-w-2xl text-lg font-medium">Manage and track your active sprints across all projects.</p>
+          <p className="max-w-2xl text-base font-medium text-slate-600 dark:text-slate-300">Manage and track your active sprints across all projects.</p>
         </div>
         <div>
           <select 
             value={selectedProjectId}
             onChange={e => setSelectedProjectId(e.target.value)}
-            className="px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-bold shadow-sm"
+            className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
           >
             {projects?.map(p => (
               <option key={p.id} value={p.id}>{p.name}</option>
@@ -109,7 +109,7 @@ const SprintBoard: React.FC = () => {
       </div>
 
       {!activeSprint && selectedProjectId && (
-        <Card className="text-center p-12 border-dashed bg-slate-50">
+        <Card className="border-dashed bg-slate-50 p-12 text-center dark:bg-slate-900">
           <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-4" />
           <h3 className="text-xl font-bold">No Active Sprint</h3>
           <p className="text-slate-500">Go to Project Details to create and start a sprint.</p>
@@ -118,9 +118,9 @@ const SprintBoard: React.FC = () => {
 
       {activeSprint && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+          <div className="surface-panel flex items-center justify-between p-4">
             <div>
-              <h3 className="text-2xl font-bold text-slate-900">{activeSprint.name}</h3>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-50">{activeSprint.name}</h3>
               <p className="text-slate-500 font-medium">
                 {new Date(activeSprint.startDate).toLocaleDateString()} — {new Date(activeSprint.endDate).toLocaleDateString()}
               </p>
@@ -139,9 +139,9 @@ const SprintBoard: React.FC = () => {
                        <div
                          ref={provided.innerRef}
                          {...provided.droppableProps}
-                         className={`p-4 rounded-2xl transition-colors duration-300 ${columnColors[columnId]} ${snapshot.isDraggingOver ? 'bg-primary/5' : 'bg-slate-50'}`}
+                         className={`rounded-lg p-4 transition-colors duration-300 ${columnColors[columnId]} ${snapshot.isDraggingOver ? 'bg-primary/5' : 'bg-slate-50 dark:bg-slate-900'}`}
                        >
-                         <h4 className="text-lg font-black text-slate-700 flex items-center gap-2 mb-4">
+                         <h4 className="mb-4 flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100">
                            {columnTitles[columnId]}
                            <span className="text-sm font-bold text-slate-400 bg-slate-200/80 px-2.5 py-1 rounded-lg">
                              {columns[columnId].length}
@@ -228,7 +228,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, onViewDetails }) => {
             (provided.dragHandleProps as any)?.onMouseDown?.(e);
           }}
           onMouseUp={handleMouseUp}
-          className={`bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md cursor-pointer transition-all group ${snapshot.isDragging ? "rotate-3 shadow-2xl ring-2 ring-primary scale-105 z-50" : ""}`}
+          className={`cursor-pointer rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md dark:border-slate-700 dark:bg-slate-800 ${snapshot.isDragging ? "rotate-3 shadow-2xl ring-2 ring-primary scale-105 z-50" : ""}`}
         >
           <div className="flex items-start justify-between mb-3">
             <span className={`px-2 py-1 text-[10px] font-black rounded-md uppercase ${
@@ -248,7 +248,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, onViewDetails }) => {
               <Eye className="w-4 h-4" />
             </button>
           </div>
-          <p className="font-bold text-slate-800 mb-2">{task.title}</p>
+          <p className="mb-2 font-bold text-slate-800 dark:text-slate-100">{task.title}</p>
           {task.assignee && (
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
               <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-black">

@@ -30,7 +30,7 @@ const SystemHealth: React.FC = () => {
 
       <Card hover={false} className="p-6">
         <div className="flex flex-col gap-5 md:flex-row md:items-center">
-          <div className={`flex h-14 w-14 items-center justify-center rounded-xl ${isHealthy ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+          <div className={`flex h-14 w-14 items-center justify-center rounded-lg ${isHealthy ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-300'}`}>
             {isHealthy ? <CheckCircle className="h-7 w-7" /> : <AlertTriangle className="h-7 w-7" />}
           </div>
           <div>

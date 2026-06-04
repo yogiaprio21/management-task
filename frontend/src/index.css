@@ -3,8 +3,28 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --app-bg: 248 250 252;
+    --app-surface: 255 255 255;
+    --app-panel: 241 245 249;
+    --app-border: 226 232 240;
+    --app-text: 15 23 42;
+    --app-muted: 71 85 105;
+  }
+
+  .dark {
+    --app-bg: 2 6 23;
+    --app-surface: 15 23 42;
+    --app-panel: 30 41 59;
+    --app-border: 51 65 85;
+    --app-text: 248 250 252;
+    --app-muted: 203 213 225;
+  }
+
   body {
     @apply bg-slate-50 text-slate-900 font-sans antialiased overflow-x-hidden transition-colors duration-300;
+    background-color: rgb(var(--app-bg));
+    color: rgb(var(--app-text));
   }
   
   .dark body {
@@ -18,19 +38,31 @@
 
 @layer components {
   .section-title {
-    @apply text-2xl md:text-3xl font-bold text-slate-950 dark:text-white tracking-tight;
+    @apply text-2xl md:text-3xl font-bold text-slate-950 dark:text-slate-50 tracking-tight;
   }
   
   .section-subtitle {
-    @apply text-slate-500 dark:text-slate-400 text-sm md:text-base font-medium;
+    @apply text-slate-600 dark:text-slate-300 text-sm md:text-base font-medium;
   }
   
   .card-gradient {
-    @apply bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-200;
+    @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm transition-all duration-200;
   }
   
   .glass-panel {
-    @apply bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800;
+    @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700;
+  }
+
+  .surface-panel {
+    @apply rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900;
+  }
+
+  .muted-panel {
+    @apply rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800;
+  }
+
+  .control {
+    @apply h-10 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50;
   }
 }
 

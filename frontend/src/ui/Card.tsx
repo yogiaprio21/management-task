@@ -9,8 +9,7 @@ export const Card: React.FC<CardProps> = ({ className, children, hover = true, .
   return (
     <div
       className={cn(
-        'card-gradient rounded-3xl p-6 relative overflow-hidden',
-        'rounded-xl',
+        'card-gradient relative overflow-hidden rounded-lg p-5',
         hover && 'hover:shadow-md',
         className
       )}

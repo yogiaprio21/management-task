@@ -114,7 +114,7 @@ const Integrations: React.FC = () => {
                   className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
                     selectedEvents.has(option.value)
                       ? 'border-primary bg-primary text-white'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
                   }`}
                 >
                   {option.label}
