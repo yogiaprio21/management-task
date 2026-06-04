@@ -10,8 +10,9 @@
     "start": "node -r tsconfig-paths/register dist/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
-    "migration:run": "typeorm migration:run -d dist/data-source.js",
-    "migration:revert": "typeorm migration:revert -d dist/data-source.js",
+    "migration:run": "node -r dotenv/config ./node_modules/typeorm/cli.js migration:run -d dist/data-source.js",
+    "migration:revert": "node -r dotenv/config ./node_modules/typeorm/cli.js migration:revert -d dist/data-source.js",
+    "db:deploy": "npm run migration:run && npm run start:prod",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start:debug": "nest start --debug --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -21,7 +22,9 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "ts-node src/seed.ts",
-    "seed:prod": "node dist/seed.js"
+    "seed:run": "node dist/seed.js",
+    "seed:prod": "npm run migration:run && node dist/seed.js",
+    "seed:neon": "npm run build && npm run seed:prod"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
@@ -42,6 +45,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "compression": "^1.8.1",
+    "dotenv": "^16.6.1",
     "helmet": "^8.1.0",
     "nodemailer": "^8.0.4",
     "passport": "^0.6.0",

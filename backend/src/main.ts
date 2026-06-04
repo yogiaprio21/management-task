@@ -23,7 +23,6 @@ async function bootstrap() {
       const allowedOrigins = [
         'http://localhost:5173',
         'http://localhost:3000',
-        'https://management-task-iota.vercel.app',
         'https://management-task1.vercel.app',
         process.env.FRONTEND_URL, // Allow env var override
       ].filter(Boolean);
@@ -81,12 +80,11 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`[7/7] 🚀 Backend running on port ${port}`);
 
-  // Run Seed in Production if Needed (Non-blocking)
-  if (process.env.NODE_ENV === 'production') {
+  // Optional seed runner. Keep disabled by default so production startup is not blocked by seed data.
+  if (process.env.RUN_SEED_ON_BOOT === 'true') {
     try {
       const { runSeed } = await import('./seed');
       console.log('🌱 Triggering Seed process in background...');
-      // Pass the existing app instance to reuse connection and ensure sync is complete
       runSeed(app).catch(err => console.error('❌ Seed failed:', err));
     } catch (error) {
       console.error('❌ Failed to load seed script:', error);

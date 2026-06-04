@@ -1,23 +1,21 @@
 # Panduan Deployment Lengkap (Production Ready)
 
 Panduan ini mencakup langkah-langkah deployment untuk:
-1.  **Database**: Supabase (PostgreSQL)
+1.  **Database**: Neon (PostgreSQL)
 2.  **Backend**: Render (NestJS)
 3.  **Frontend**: Vercel (React/Vite)
 
 ---
 
-## 1. Setup Database (Supabase)
+## 1. Setup Database (Neon)
 
-1.  Login ke [Supabase](https://supabase.com/).
-2.  Buat **New Project**.
-3.  Isi nama project dan password database (SIMPAN PASSWORD INI).
-4.  Pilih region terdekat (misal: Singapore).
-5.  Setelah project aktif, masuk ke **Project Settings** > **Database** > **Connection string**.
-6.  Pilih tab **URI** dan salin connection string-nya.
-    *   Format: `postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres`
-    *   Ganti `[PASSWORD]` dengan password yang Anda buat di langkah 3.
-    *   **Simpan URL ini untuk langkah selanjutnya.**
+1.  Login ke [Neon](https://neon.tech/).
+2.  Buat **New Project** dan pilih region terdekat.
+3.  Buka **Connection Details** lalu pilih branch, database, dan role yang ingin digunakan.
+4.  Salin connection string Postgres.
+    *   Format: `postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require`
+    *   Untuk traffic serverless atau koneksi yang sering dibuka, gunakan pooled URL dari Neon jika tersedia.
+    *   Simpan URL ini sebagai `DATABASE_URL`.
 
 ---
 
@@ -30,14 +28,15 @@ Panduan ini mencakup langkah-langkah deployment untuk:
 5.  Konfigurasi:
     *   **Runtime**: Node
     *   **Build Command**: `npm install && npm run build`
-    *   **Start Command**: `npm run migration:run && npm run start:prod`
+    *   **Start Command**: `npm run db:deploy`
         *   *Catatan: Migration berjalan sebelum server menerima traffic. Seed data opsional dan tidak menggantikan migration.*
 6.  Scroll ke bawah ke bagian **Environment Variables**. Tambahkan variabel berikut:
     *   `NODE_ENV`: `production`
     *   `PORT`: `10000`
-    *   `DATABASE_URL`: (Tempel URL Supabase dari Langkah 1)
+    *   `DATABASE_URL`: (Tempel URL Neon dari Langkah 1)
     *   `DB_SYNCHRONIZE`: `false` (Production wajib memakai migration, bukan sinkronisasi otomatis)
-    *   `DB_SSL`: `true` (Wajib: untuk koneksi aman ke Supabase)
+    *   `DB_SSL`: `true` (Wajib: untuk koneksi aman ke Neon)
+    *   `RUN_SEED_ON_BOOT`: `false`
     *   `JWT_SECRET`: (Isi dengan string acak yang panjang dan aman, misal hasil dari `openssl rand -hex 32`)
     *   `FRONTEND_URL`: (Kosongkan dulu, atau isi sementara dengan `http://localhost:5173`. Nanti kita update setelah Frontend di-deploy di Vercel).
 7.  Klik **Create Web Service**.
@@ -73,9 +72,27 @@ Agar Backend aman (CORS) dan hanya menerima request dari Frontend Vercel Anda:
 
 ---
 
+## 5. Migration dan Seed Neon dari VS Code
+
+Jalankan dari terminal VS Code jika ingin menyiapkan database Neon secara manual:
+
+```powershell
+cd D:\PROJECT\Hosting\Management-Task\backend
+$env:DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require"
+$env:DB_SSL="true"
+$env:DB_SYNCHRONIZE="false"
+npm run build
+npm run migration:run
+npm run seed:prod
+```
+
+`seed:prod` sudah menjalankan migration terlebih dahulu, sehingga aman jika Render dashboard masih memakai command lama `npm run seed:prod && npm run start:prod`.
+
+---
+
 ## Checklist Verifikasi Production
 
-- [ ] **Database**: Tabel `user`, `task`, dll sudah terbuat di Supabase (otomatis via TypeORM saat backend start).
+- [ ] **Database**: Tabel `users`, `projects`, `workspaces`, `tasks`, `daily_reports`, `webhooks`, dan tabel pendukung sudah terbuat di Neon melalui migration.
 - [ ] **Seed Data**: User admin demo (`admin@example.com`) sudah bisa login.
 - [ ] **Security**: Backend menggunakan `https` dan CORS memblokir origin asing.
-- [ ] **Frontend**: Tidak ada error di console browser, bisa register/login, dan data tersimpan.
+- [ ] **Frontend**: Tidak ada error dari bundle aplikasi, bisa register/login, workspace tampil, reports analytics tidak 404, dan data tersimpan.

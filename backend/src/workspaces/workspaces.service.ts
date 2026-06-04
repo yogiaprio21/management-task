@@ -86,6 +86,8 @@ export class WorkspacesService {
   }
 
   async findAll(user: User): Promise<Workspace[]> {
+    await this.ensurePersonalWorkspace(user);
+
     const query = this.workspacesRepository
       .createQueryBuilder('workspace')
       .leftJoinAndSelect('workspace.members', 'workspaceMember')

@@ -12,16 +12,18 @@ import ProjectSwitcher from '../components/ProjectSwitcher';
 const ReportsDashboard: React.FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState('');
 
-  const { data: reports = [], isLoading: reportsLoading } = useQuery({
+  const { data: reports = [], isError: reportsError, isLoading: reportsLoading } = useQuery({
     queryKey: ['reports', selectedProjectId],
     queryFn: () => getReports(selectedProjectId),
     enabled: !!selectedProjectId,
+    retry: false,
   });
 
-  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+  const { data: analytics, isError: analyticsError, error: analyticsErrorDetail, isLoading: analyticsLoading } = useQuery({
     queryKey: ['reports-analytics', selectedProjectId],
     queryFn: () => getReportsAnalytics(selectedProjectId),
     enabled: !!selectedProjectId,
+    retry: false,
   });
 
   return (
@@ -41,6 +43,18 @@ const ReportsDashboard: React.FC = () => {
         />
       ) : analyticsLoading ? (
         <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : analyticsError ? (
+        <Card hover={false} className="border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 flex-none" />
+            <div>
+              <h3 className="font-bold">Analytics endpoint is not ready</h3>
+              <p className="mt-1 text-sm leading-6">
+                {(analyticsErrorDetail as Error)?.message || 'Run backend migrations and redeploy Render so /reports/analytics is available.'}
+              </p>
+            </div>
+          </div>
+        </Card>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -126,6 +140,8 @@ const ReportsDashboard: React.FC = () => {
               <h3 className="mb-5 text-lg font-bold text-slate-950 dark:text-white">Daily & Weekly Reports</h3>
               {reportsLoading ? (
                 <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : reportsError ? (
+                <EmptyState title="Reports unavailable" description="The backend reports endpoint is not ready yet. Check Render deploy logs and migrations." />
               ) : reports.length ? (
                 <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
                   {reports.map((report) => (

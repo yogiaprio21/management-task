@@ -10,6 +10,7 @@ interface WorkspaceContextType {
   selectedWorkspace?: Workspace;
   setSelectedWorkspaceId: (id: string) => void;
   isLoading: boolean;
+  isError: boolean;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -20,10 +21,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { user } = useAuth();
   const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState(() => localStorage.getItem(STORAGE_KEY) || '');
 
-  const { data: workspaces = [], isLoading } = useQuery({
+  const { data: workspaces = [], isError, isLoading } = useQuery({
     queryKey: ['workspaces'],
     queryFn: getWorkspaces,
     enabled: !!user,
+    retry: false,
   });
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   return (
-    <WorkspaceContext.Provider value={{ workspaces, selectedWorkspaceId, selectedWorkspace, setSelectedWorkspaceId, isLoading }}>
+    <WorkspaceContext.Provider value={{ workspaces, selectedWorkspaceId, selectedWorkspace, setSelectedWorkspaceId, isLoading, isError }}>
       {children}
     </WorkspaceContext.Provider>
   );

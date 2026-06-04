@@ -1,4 +1,13 @@
 User-agent: *
 Allow: /
+Disallow: /tasks
+Disallow: /projects
+Disallow: /workspaces
+Disallow: /sprints
+Disallow: /backlog
+Disallow: /reports
+Disallow: /users
+Disallow: /admin
+Disallow: /settings
 
-Sitemap: https://management-task-iota.vercel.app/sitemap.xml
+Sitemap: https://management-task1.vercel.app/sitemap.xml

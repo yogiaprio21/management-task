@@ -5,6 +5,9 @@ import { ProjectsService } from './projects/projects.service';
 import { SprintsService } from './sprints/sprints.service';
 import { BacklogService } from './backlog/backlog.service';
 import { TasksService } from './tasks/tasks.service';
+import { ReportsService } from './reports/reports.service';
+import { WebhooksService } from './integrations/webhooks/webhooks.service';
+import { WorkspacesService } from './workspaces/workspaces.service';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { INestApplicationContext } from '@nestjs/common';
@@ -16,6 +19,9 @@ export async function runSeed(app: INestApplicationContext) {
   const sprintsService = app.get(SprintsService);
   const backlogService = app.get(BacklogService);
   const tasksService = app.get(TasksService);
+  const reportsService = app.get(ReportsService);
+  const webhooksService = app.get(WebhooksService);
+  const workspacesService = app.get(WorkspacesService);
 
   console.log('🌱 Starting Seed Process...');
 
@@ -59,6 +65,10 @@ export async function runSeed(app: INestApplicationContext) {
   const eng1 = await getOrCreateUser({ email: 'dev1@engineering.com', name: 'Frontend Dev', role: 'user' });
   const eng2 = await getOrCreateUser({ email: 'dev2@engineering.com', name: 'Backend Dev', role: 'user' });
   const mkt1 = await getOrCreateUser({ email: 'marketer@marketing.com', name: 'Content Creator', role: 'user' });
+
+  for (const account of [admin, engLead, marketingDir, eng1, eng2, mkt1]) {
+    await workspacesService.ensurePersonalWorkspace(account);
+  }
 
   // --- IDEMPOTENT PROJECT CREATION ---
   const getOrCreateProject = async (projectData: any, owner: any) => {
@@ -221,6 +231,49 @@ export async function runSeed(app: INestApplicationContext) {
     backlogItemId: bAuth.id,
     assigneeId: eng2.id,
     deadline: new Date(new Date().setDate(new Date().getDate() + 20))
+  }, engLead);
+
+  const getOrCreateReport = async (reportData: any, owner: any) => {
+    const repo = dataSource.getRepository('DailyReport');
+    const existing = await repo.findOne({
+      where: {
+        projectId: reportData.projectId,
+        type: reportData.type,
+        content: reportData.content,
+      },
+    }) as any;
+    if (existing) return existing;
+    console.log(`📝 Creating ${reportData.type} report for project: ${reportData.projectId}`);
+    return reportsService.create(reportData, owner);
+  };
+
+  console.log('Publishing Reports...');
+  await getOrCreateReport({
+    projectId: cloudProject.id,
+    type: 'daily',
+    content: 'Completed schema review and API gateway baseline. Today we are validating Neon migration readiness and workspace access boundaries.',
+  }, engLead);
+  await getOrCreateReport({
+    projectId: cloudProject.id,
+    type: 'weekly',
+    content: 'Cloud migration remains on track. Velocity is stable, blockers are limited to deployment verification and final webhook smoke tests.',
+  }, engLead);
+
+  const getOrCreateWebhook = async (webhookData: any, owner: any) => {
+    const repo = dataSource.getRepository('Webhook');
+    const existing = await repo.findOne({ where: { projectId: webhookData.projectId, url: webhookData.url } }) as any;
+    if (existing) return existing;
+    console.log(`🔗 Creating webhook for project: ${webhookData.projectId}`);
+    return webhooksService.create(webhookData, owner);
+  };
+
+  console.log('Configuring Webhooks...');
+  await getOrCreateWebhook({
+    projectId: cloudProject.id,
+    url: 'https://discord.com/api/webhooks/taskflow-demo/safe-placeholder',
+    events: ['task.created', 'task.status_changed', 'sprint.completed'],
+    active: false,
+    secret: 'taskflow-demo-secret',
   }, engLead);
 
   console.log('🌱 Seed Completed/Verified Successfully!');

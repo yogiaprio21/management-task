@@ -2,7 +2,7 @@ import { BriefcaseBusiness, UserRound } from 'lucide-react';
 import { useWorkspace } from '../context/WorkspaceContext';
 
 const WorkspaceSwitcher = () => {
-  const { workspaces, selectedWorkspaceId, selectedWorkspace, setSelectedWorkspaceId, isLoading } = useWorkspace();
+  const { workspaces, selectedWorkspaceId, selectedWorkspace, setSelectedWorkspaceId, isError, isLoading } = useWorkspace();
 
   return (
     <div className="space-y-2">
@@ -19,10 +19,12 @@ const WorkspaceSwitcher = () => {
           id="workspace-switcher"
           value={selectedWorkspaceId}
           onChange={(event) => setSelectedWorkspaceId(event.target.value)}
-          disabled={isLoading || workspaces.length === 0}
+          disabled={isLoading || isError || workspaces.length === 0}
           className="h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm font-semibold text-slate-900 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
         >
-          {workspaces.length === 0 ? (
+          {isError ? (
+            <option value="">Workspace unavailable</option>
+          ) : workspaces.length === 0 ? (
             <option value="">No workspace</option>
           ) : (
             workspaces.map((workspace) => (

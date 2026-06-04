@@ -1,0 +1,24 @@
+{
+  "name": "TaskFlow Workspace",
+  "short_name": "TaskFlow",
+  "description": "A clean workspace app for projects, backlog, sprint boards, tasks, reports, audit logs, and webhook integrations.",
+  "start_url": "/preview",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#2563EB",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

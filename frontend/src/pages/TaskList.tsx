@@ -152,39 +152,51 @@ const TaskList: React.FC = () => {
         )}
       />
 
-      <div className="surface-panel flex flex-col gap-4 p-4 md:flex-row">
-        <ProjectSwitcher value={selectedProjectId} onChange={setSelectedProjectId} label="Project scope" />
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
+      <div className="surface-panel grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_minmax(260px,1.2fr)_auto_minmax(150px,0.7fr)_minmax(150px,0.7fr)] xl:items-end">
+        <div className="min-w-0">
+          <ProjectSwitcher value={selectedProjectId} onChange={setSelectedProjectId} label="Project scope" />
         </div>
-        <div className="flex flex-wrap gap-3">
-          <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg flex items-center">
+
+        <label className="block min-w-0">
+          <span className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Search</span>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="control h-10 w-full pl-9"
+            />
+          </div>
+        </label>
+
+        <div className="min-w-[190px]">
+          <span className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Assignee</span>
+          <div className="grid h-10 grid-cols-2 rounded-md bg-slate-100 p-1 dark:bg-slate-800">
             <button 
               onClick={() => setAssigneeFilter('me')}
-              className={`px-3 py-1.5 rounded-md text-sm font-bold transition-all ${assigneeFilter === 'me' ? 'bg-white dark:bg-gray-600 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
+              className={`rounded px-3 text-sm font-bold transition-all ${assigneeFilter === 'me' ? 'bg-white text-primary shadow-sm dark:bg-slate-700' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
             >
               My Tasks
             </button>
             <button 
               onClick={() => setAssigneeFilter('all')}
-              className={`px-3 py-1.5 rounded-md text-sm font-bold transition-all ${assigneeFilter === 'all' ? 'bg-white dark:bg-gray-600 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
+              className={`rounded px-3 text-sm font-bold transition-all ${assigneeFilter === 'all' ? 'bg-white text-primary shadow-sm dark:bg-slate-700' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
             >
               All Tasks
             </button>
           </div>
+        </div>
+
+        <label className="block min-w-0">
+          <span className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Status</span>
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-9 pr-8 py-2 border rounded-lg appearance-none bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="control h-10 w-full appearance-none pl-9 pr-8"
             >
               <option value="all">All Status</option>
               <option value="todo">To Do</option>
@@ -193,17 +205,21 @@ const TaskList: React.FC = () => {
               <option value="done">Done</option>
             </select>
           </div>
+        </label>
+
+        <label className="block min-w-0">
+          <span className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Priority</span>
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="control h-10 w-full"
           >
             <option value="all">All Priority</option>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
-        </div>
+        </label>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
