@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { Sprint } from '../sprints/sprint.entity';
 import { BacklogItem } from '../backlog/backlog-item.entity';
 import { User } from '../users/user.entity';
+import { Workspace } from '../workspaces/workspace.entity';
 
 @Entity('projects')
 export class Project {
@@ -24,6 +25,13 @@ export class Project {
   @ManyToMany(() => User, (user) => user.memberProjects)
   @JoinTable({ name: 'project_members' })
   members: User[];
+
+  @Column({ nullable: true })
+  @Index()
+  workspaceId: string;
+
+  @ManyToOne(() => Workspace, (workspace) => workspace.projects)
+  workspace: Workspace;
 
   @OneToMany(() => Sprint, (sprint) => sprint.project)
   sprints: Sprint[];

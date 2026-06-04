@@ -1,148 +1,140 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { login as loginApi } from '../api/auth';
-import { Lock, Mail, ArrowRight } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Eye, EyeOff, KanbanSquare, Lock, Mail, ShieldCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { login as loginApi } from '../api/auth';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
+import { Input } from '../ui/Input';
 import Logo from '../components/Logo';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const errors = useMemo(() => ({
+    email: submitted && !/^\S+@\S+\.\S+$/.test(email) ? 'Enter a valid email address.' : '',
+    password: submitted && password.length < 6 ? 'Password must be at least 6 characters.' : '',
+  }), [email, password, submitted]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSubmitted(true);
+    if (errors.email || errors.password || !email || !password) return;
+
     setIsLoading(true);
-    
     try {
       const data = await loginApi({ email, password });
       await login(data.access_token);
-      toast.success('Welcome back!');
-      navigate('/');
+      toast.success('Welcome back');
+      navigate('/', { replace: true });
     } catch (err: any) {
-      const message = err?.response?.data?.message || 'Invalid email or password';
-      toast.error(message);
+      toast.error(err?.response?.data?.message || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-4 relative overflow-hidden">
-      {/* Abstract Background Shapes */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-100/50 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-100/50 rounded-full blur-[100px]" />
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-md w-full relative z-10"
-      >
-        <Card className="p-8 md:p-10 shadow-xl border-none">
-          <div className="text-center mb-10 flex flex-col items-center">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="mb-6"
-            >
-              <Logo size={64} showText={false} />
-            </motion.div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Welcome Back</h2>
-            <p className="text-slate-500 mt-2 font-medium">Sign in to Task<span className="text-primary">Flow</span></p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Input
-              id="email"
-              label="Email Address"
-              type="email"
-              required
-              placeholder="you@example.com"
-              icon={<Mail className="w-5 h-5" />}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="bg-slate-50 border-slate-200"
-            />
-
-            <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <label htmlFor="password" className="text-sm font-semibold text-slate-700">Password</label>
-                <Link to="#" className="text-xs font-semibold text-primary hover:underline">Forgot password?</Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                required
-                placeholder="••••••••"
-                icon={<Lock className="w-5 h-5" />}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-slate-50 border-slate-200"
-              />
+    <div className="min-h-screen bg-slate-100 px-4 py-8 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl gap-6 lg:grid-cols-[1fr_430px] lg:items-stretch">
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:p-8 lg:flex lg:flex-col lg:justify-between">
+          <Logo size={42} />
+          <div className="mt-10 max-w-2xl lg:mt-0">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+              <ShieldCheck className="h-4 w-4" />
+              Workspace access control
             </div>
-
-            <Button
-              type="submit"
-              className="w-full h-12 text-base font-bold"
-              isLoading={isLoading}
-            >
-              {!isLoading && (
-                <>
-                  Sign In
-                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
-            </Button>
-          </form>
-
-          <div className="mt-8 text-center">
-            <p className="text-slate-500 text-sm font-medium">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-primary font-bold hover:underline">
-                Create account
-              </Link>
+            <h1 className="text-4xl font-bold leading-tight tracking-tight md:text-5xl">
+              Kelola pekerjaan personal dan tim dalam workspace yang terpisah.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 dark:text-slate-300">
+              TaskFlow menggabungkan project, backlog, sprint board, task pribadi, audit log, dan integrasi webhook dalam satu produk portfolio yang rapi dan aman.
             </p>
           </div>
-
-          {/* Demo Credentials */}
-          <div className="mt-10 pt-8 border-t border-slate-100">
-            <div className="flex items-center gap-2 mb-4 text-slate-400">
-              <div className="h-px flex-1 bg-slate-100" />
-              <span className="text-[10px] uppercase tracking-widest font-bold">Demo Accounts</span>
-              <div className="h-px flex-1 bg-slate-100" />
-            </div>
-            <div className="grid grid-cols-1 gap-2">
-              <button 
-                type="button"
-                onClick={() => { setEmail('admin@example.com'); setPassword('password123'); }}
-                className="text-[11px] flex justify-between items-center p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group"
-              >
-                <span className="font-bold text-slate-600 group-hover:text-primary">Admin</span>
-                <span className="text-slate-400">admin@example.com • password123</span>
-              </button>
-              <button 
-                type="button"
-                onClick={() => { setEmail('manager@example.com'); setPassword('password123'); }}
-                className="text-[11px] flex justify-between items-center p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group"
-              >
-                <span className="font-bold text-slate-600 group-hover:text-primary">Manager</span>
-                <span className="text-slate-400">manager@example.com • password123</span>
-              </button>
-            </div>
+          <div className="mt-10 grid gap-3 md:grid-cols-3">
+            {[
+              ['Workspace', 'Personal dan team scope'],
+              ['Kanban', 'Sprint dan task tracking'],
+              ['Audit', 'Riwayat perubahan jelas'],
+            ].map(([title, text]) => (
+              <div key={title} className="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+                <KanbanSquare className="mb-3 h-5 w-5 text-primary" />
+                <p className="font-bold">{title}</p>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{text}</p>
+              </div>
+            ))}
           </div>
-        </Card>
-      </motion.div>
+        </section>
+
+        <section className="flex items-center justify-center">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full">
+            <Card hover={false} className="p-6 md:p-8">
+              <div className="mb-8">
+                <Logo size={44} showText={false} />
+                <h2 className="mt-5 text-2xl font-bold text-slate-950 dark:text-slate-50">Sign in</h2>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Continue to your planning workspace.</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              <Input
+                id="email"
+                label="Email"
+                type="email"
+                placeholder="you@example.com"
+                icon={<Mail className="h-5 w-5" />}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                error={errors.email}
+                autoComplete="email"
+              />
+
+              <div className="relative">
+                <Input
+                  id="password"
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  icon={<Lock className="h-5 w-5" />}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  error={errors.password}
+                  autoComplete="current-password"
+                  className="pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute right-2 top-8 rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
+              <Button type="submit" className="w-full" isLoading={isLoading}>
+                Sign In
+                {!isLoading && <ArrowRight className="h-4 w-4" />}
+              </Button>
+            </form>
+
+            <div className="mt-6 flex items-center justify-between text-sm">
+              <Link to="/register" className="font-semibold text-primary hover:underline">Create account</Link>
+              <Link to="/preview" className="font-semibold text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white">
+                Preview
+              </Link>
+            </div>
+          </Card>
+        </motion.div>
+      </section>
+      </div>
     </div>
   );
 };

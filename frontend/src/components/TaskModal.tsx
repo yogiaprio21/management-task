@@ -2,9 +2,10 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { getUsers } from '../api/users';
-import { addComment, getTaskHistory, getTask } from '../api/tasks';
+import { addAttachment, addComment, getTaskHistory, getTask } from '../api/tasks';
 import { X, MessageSquare, Paperclip, History, Info, Send, Plus, File, ExternalLink } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { DatePicker } from '../ui/DatePicker';
 import { toast } from 'react-hot-toast';
 import type { Task, CreateTaskDto, UpdateTaskDto, Comment, Attachment, AuditLog } from '../types';
 
@@ -21,6 +22,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'attachments' | 'history'>('details');
   const [commentText, setCommentText] = useState('');
+  const [attachmentUrl, setAttachmentUrl] = useState('');
+  const [attachmentName, setAttachmentName] = useState('');
 
   const { data: users } = useQuery({ queryKey: ['users'], queryFn: () => getUsers() });
   
@@ -45,6 +48,21 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
       toast.success('Comment added');
     },
     onError: () => toast.error('Failed to add comment'),
+  });
+
+  const attachmentMutation = useMutation({
+    mutationFn: () => addAttachment(task!.id, {
+      filename: attachmentName || attachmentUrl.split('/').pop() || 'Attachment',
+      url: attachmentUrl,
+      mimetype: 'text/uri-list',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task', task?.id] });
+      setAttachmentUrl('');
+      setAttachmentName('');
+      toast.success('Attachment added');
+    },
+    onError: () => toast.error('Failed to add attachment'),
   });
 
   const initialFormData = useMemo(() => ({
@@ -77,7 +95,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-gray-800">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
           <div>
@@ -195,16 +213,13 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Deadline</label>
-                  <input
-                    type="date"
-                    disabled={!canEditDetails}
-                    value={formData.deadline}
-                    onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none font-bold"
-                  />
-                </div>
+                <DatePicker
+                  id="task-deadline"
+                  label="Deadline"
+                  disabled={!canEditDetails}
+                  value={formData.deadline}
+                  onChange={(deadline) => setFormData({ ...formData, deadline })}
+                />
               </div>
             </form>
           )}
@@ -220,7 +235,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
                       <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-[10px]">
                         {c.user?.name.charAt(0)}
                       </div>
-                      <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-2xl rounded-tl-none">
+                      <div className="flex-1 rounded-lg rounded-tl-none bg-gray-50 p-3 dark:bg-gray-700/50">
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-xs font-black text-gray-700 dark:text-gray-200">{c.user?.name}</span>
                           <span className="text-[10px] text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</span>
@@ -270,10 +285,37 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task: 
                   </div>
                 ))}
               </div>
-              <button className="w-full py-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-primary hover:text-primary transition-all group">
-                <Plus className="w-8 h-8 group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-black uppercase tracking-widest">Upload File</span>
-              </button>
+              <div className="rounded-xl border border-dashed border-gray-200 p-4 dark:border-gray-700">
+                <div className="grid gap-3 md:grid-cols-[1fr_1.4fr_auto] md:items-end">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-black uppercase tracking-widest text-gray-400">File name</label>
+                    <input
+                      value={attachmentName}
+                      onChange={(event) => setAttachmentName(event.target.value)}
+                      placeholder="Design brief"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-gray-700 dark:bg-gray-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-black uppercase tracking-widest text-gray-400">Attachment URL</label>
+                    <input
+                      value={attachmentUrl}
+                      onChange={(event) => setAttachmentUrl(event.target.value)}
+                      placeholder="https://..."
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-gray-700 dark:bg-gray-700"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => attachmentUrl.trim() && attachmentMutation.mutate()}
+                    isLoading={attachmentMutation.isPending}
+                    disabled={!attachmentUrl.trim()}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 

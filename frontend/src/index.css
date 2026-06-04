@@ -3,23 +3,32 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --app-bg: 248 250 252;
+    --app-surface: 255 255 255;
+    --app-panel: 241 245 249;
+    --app-border: 226 232 240;
+    --app-text: 15 23 42;
+    --app-muted: 71 85 105;
+  }
+
+  .dark {
+    --app-bg: 2 6 23;
+    --app-surface: 15 23 42;
+    --app-panel: 30 41 59;
+    --app-border: 51 65 85;
+    --app-text: 248 250 252;
+    --app-muted: 203 213 225;
+  }
+
   body {
     @apply bg-slate-50 text-slate-900 font-sans antialiased overflow-x-hidden transition-colors duration-300;
-    /* Soft mesh gradient pattern for light mode */
-    background-image: 
-      radial-gradient(at 40% 20%, hsla(220, 100%, 97%, 1) 0px, transparent 50%),
-      radial-gradient(at 80% 0%, hsla(189, 100%, 96%, 1) 0px, transparent 50%),
-      radial-gradient(at 0% 50%, hsla(240, 100%, 98%, 1) 0px, transparent 50%);
-    background-attachment: fixed;
+    background-color: rgb(var(--app-bg));
+    color: rgb(var(--app-text));
   }
   
   .dark body {
-    @apply bg-surface-dark text-slate-100;
-    /* Deep space mesh gradient pattern for dark mode */
-    background-image: 
-      radial-gradient(at 40% 20%, hsla(220, 40%, 15%, 1) 0px, transparent 50%),
-      radial-gradient(at 80% 0%, hsla(189, 40%, 12%, 1) 0px, transparent 50%),
-      radial-gradient(at 0% 50%, hsla(240, 40%, 10%, 1) 0px, transparent 50%);
+    @apply bg-slate-950 text-slate-100;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -29,19 +38,31 @@
 
 @layer components {
   .section-title {
-    @apply text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight;
+    @apply text-2xl md:text-3xl font-bold text-slate-950 dark:text-slate-50 tracking-tight;
   }
   
   .section-subtitle {
-    @apply text-slate-500 dark:text-slate-400 text-base md:text-lg font-medium;
+    @apply text-slate-600 dark:text-slate-300 text-sm md:text-base font-medium;
   }
   
   .card-gradient {
-    @apply bg-surface-glass dark:bg-surface-darkGlass backdrop-blur-xl border border-white/40 dark:border-white/5 shadow-glass dark:shadow-glass-dark hover:shadow-lg transition-all duration-300;
+    @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm transition-all duration-200;
   }
   
   .glass-panel {
-    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-white/50 dark:border-white/10;
+    @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700;
+  }
+
+  .surface-panel {
+    @apply rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900;
+  }
+
+  .muted-panel {
+    @apply rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800;
+  }
+
+  .control {
+    @apply h-10 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50;
   }
 }
 

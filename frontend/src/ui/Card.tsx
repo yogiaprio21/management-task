@@ -1,10 +1,5 @@
 import React from 'react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from './utils';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   hover?: boolean;
@@ -14,8 +9,8 @@ export const Card: React.FC<CardProps> = ({ className, children, hover = true, .
   return (
     <div
       className={cn(
-        'card-gradient rounded-3xl p-6 relative overflow-hidden',
-        hover && 'hover:-translate-y-1',
+        'card-gradient relative overflow-hidden rounded-lg p-5',
+        hover && 'hover:shadow-md',
         className
       )}
       {...props}

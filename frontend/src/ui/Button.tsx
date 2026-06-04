@@ -1,10 +1,5 @@
 import React from 'react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from './utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -22,23 +17,23 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const variants = {
-    primary: 'bg-gradient-to-r from-primary to-primary-hover text-white shadow-md hover:shadow-glow hover:-translate-y-0.5 border border-white/10',
-    secondary: 'bg-surface-glass dark:bg-surface-darkGlass backdrop-blur-md text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-subtle hover:shadow-md',
-    outline: 'border-2 border-primary/50 text-primary hover:bg-primary-glass hover:border-primary',
+    primary: 'bg-primary text-white shadow-sm hover:bg-primary-hover border border-primary',
+    secondary: 'bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 shadow-sm dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 dark:hover:bg-slate-800',
+    outline: 'border border-primary/50 text-primary hover:bg-primary/5 hover:border-primary',
     ghost: 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
-    danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:-translate-y-0.5',
+    danger: 'bg-red-600 text-white hover:bg-red-700 border border-red-600',
   };
 
   const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2',
-    lg: 'px-6 py-3 text-lg',
+    sm: 'h-8 px-3 text-sm',
+    md: 'h-10 px-4 text-sm',
+    lg: 'h-11 px-5 text-base',
   };
 
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center rounded-xl font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:pointer-events-none',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none',
         variants[variant],
         sizes[size],
         className

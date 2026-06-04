@@ -10,6 +10,7 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { toast } from 'react-hot-toast';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 const ProductBacklog: React.FC = () => {
   const queryClient = useQueryClient();
@@ -21,6 +22,7 @@ const ProductBacklog: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editPriority, setEditPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [editStatus, setEditStatus] = useState<'todo' | 'in_progress' | 'done'>('todo');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ['projects'],
@@ -120,16 +122,16 @@ const ProductBacklog: React.FC = () => {
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-4xl font-extrabold text-slate-900 flex items-center gap-3">
+          <h1 className="flex items-center gap-3 text-3xl font-bold text-slate-900 dark:text-slate-50">
             <LayoutList className="w-10 h-10 text-primary" /> Product Backlog
           </h1>
-          <p className="text-slate-500 max-w-2xl text-lg font-medium">Manage and prioritize upcoming features and tasks.</p>
+          <p className="max-w-2xl text-base font-medium text-slate-600 dark:text-slate-300">Manage and prioritize upcoming features and tasks.</p>
         </div>
         <div className="flex items-center gap-3">
           <select 
             value={selectedProjectId}
             onChange={e => setSelectedProjectId(e.target.value)}
-            className="px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-bold shadow-sm"
+            className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
           >
             {projects?.map(p => (
               <option key={p.id} value={p.id}>{p.name}</option>
@@ -140,7 +142,7 @@ const ProductBacklog: React.FC = () => {
 
       {/* Active Sprint Badge */}
       {activeSprint && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950">
           <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
           <span className="text-sm font-bold text-emerald-700">Active Sprint: {activeSprint.name}</span>
           <span className="text-xs text-emerald-500 font-medium">
@@ -150,14 +152,14 @@ const ProductBacklog: React.FC = () => {
       )}
 
       {!activeSprint && selectedProjectId && (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950">
           <span className="text-sm font-bold text-amber-700">⚠ No active sprint for this project. Create and activate a sprint in Project Details to enable "Move to Sprint".</span>
         </div>
       )}
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <div className="surface-panel p-5">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-slate-900">Queue</h3>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50">Queue</h3>
           <Button onClick={() => setIsCreating(true)} className="gap-2">
             <Plus className="w-4 h-4" /> Add Item
           </Button>
@@ -166,10 +168,10 @@ const ProductBacklog: React.FC = () => {
         <AnimatePresence>
           {isCreating && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-6">
-              <Card className="bg-slate-50 border-slate-200 p-4">
+              <Card className="border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
                 <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-4">
                   <Input placeholder="What needs to be done?" className="flex-1" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
-                  <select value={priority} onChange={e => setPriority(e.target.value as any)} className="px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 font-medium">
+                  <select value={priority} onChange={e => setPriority(e.target.value as any)} className="control">
                     <option value="low">Low Priority</option>
                     <option value="medium">Medium Priority</option>
                     <option value="high">High Priority</option>
@@ -192,20 +194,20 @@ const ProductBacklog: React.FC = () => {
           ) : (
             backlogItems?.map((item) => (
               editingItem === item.id ? (
-                <Card key={item.id} className="p-4 bg-slate-50 border-primary shadow-md">
+                <Card key={item.id} className="border-primary bg-slate-50 p-4 shadow-md dark:bg-slate-800">
                    <form onSubmit={(e) => handleUpdate(e, item.id)} className="flex flex-col gap-4">
                      <div className="flex justify-between items-center mb-2">
-                       <h4 className="font-bold text-slate-700">Edit Backlog Item</h4>
+                       <h4 className="font-bold text-slate-800 dark:text-slate-100">Edit Backlog Item</h4>
                        <button type="button" onClick={() => setEditingItem(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
                      </div>
                      <Input placeholder="What needs to be done?" value={editTitle} onChange={e => setEditTitle(e.target.value)} autoFocus />
                      <div className="flex gap-4">
-                       <select value={editPriority} onChange={e => setEditPriority(e.target.value as any)} className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 font-medium">
+                       <select value={editPriority} onChange={e => setEditPriority(e.target.value as any)} className="control flex-1">
                          <option value="low">Low Priority</option>
                          <option value="medium">Medium Priority</option>
                          <option value="high">High Priority</option>
                        </select>
-                       <select value={editStatus} onChange={e => setEditStatus(e.target.value as any)} className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 font-medium">
+                       <select value={editStatus} onChange={e => setEditStatus(e.target.value as any)} className="control flex-1">
                          <option value="todo">To Do</option>
                          <option value="in_progress">In Progress</option>
                          <option value="done">Done</option>
@@ -213,7 +215,7 @@ const ProductBacklog: React.FC = () => {
                      </div>
                      <div className="flex gap-2 justify-between mt-2">
                        <div>
-                         <Button type="button" variant="secondary" onClick={() => { if(window.confirm('Delete item?')) deleteBacklogMutation.mutate(item.id); }} className="text-red-500 hover:text-red-600 border-red-200"><Trash2 className="w-4 h-4 mr-2" /> Delete</Button>
+                         <Button type="button" variant="secondary" onClick={() => setDeleteId(item.id)} className="text-red-500 hover:text-red-600 border-red-200"><Trash2 className="w-4 h-4 mr-2" /> Delete</Button>
                        </div>
                        <Button type="submit" isLoading={updateBacklogMutation.isPending}>Save Changes</Button>
                      </div>
@@ -222,7 +224,7 @@ const ProductBacklog: React.FC = () => {
               ) : (
                 <Card 
                   key={item.id} 
-                  className="py-4 px-6 flex items-center justify-between hover:border-primary hover:shadow-md transition-all"
+                  className="flex items-center justify-between px-5 py-4 transition-all hover:border-primary hover:shadow-md"
                 >
                   <div 
                     className="flex items-center gap-4 flex-1 cursor-pointer"
@@ -236,10 +238,10 @@ const ProductBacklog: React.FC = () => {
                     <div className={`w-3 h-3 rounded-full ${
                       item.priority === 'high' ? 'bg-red-500' : item.priority === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
                     }`} />
-                    <span className="font-bold text-slate-700 block">{item.title}</span>
+                    <span className="block font-bold text-slate-800 dark:text-slate-100">{item.title}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                     <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{item.status.replace('_', ' ')}</span>
+                     <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">{item.status.replace('_', ' ')}</span>
                      {activeSprint && (
                        <button
                          onClick={(e) => {
@@ -278,6 +280,16 @@ const ProductBacklog: React.FC = () => {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteId}
+        title="Delete backlog item?"
+        description="This backlog item will be removed from the queue. Sprint tasks already created from it are not changed."
+        confirmLabel="Delete"
+        isLoading={deleteBacklogMutation.isPending}
+        onClose={() => setDeleteId(null)}
+        onConfirm={() => deleteId && deleteBacklogMutation.mutate(deleteId, { onSuccess: () => setDeleteId(null) })}
+      />
     </div>
   );
 };

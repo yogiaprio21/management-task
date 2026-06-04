@@ -39,8 +39,8 @@ const NotificationBell: React.FC = () => {
     <div className="relative" onClick={(e) => e.stopPropagation()}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-2.5 rounded-2xl transition-all duration-300 ${
-          isOpen ? 'bg-primary/10 text-primary shadow-inner' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+        className={`relative rounded-md p-2 transition-all duration-200 ${
+          isOpen ? 'bg-primary/10 text-primary shadow-inner' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
         }`}
       >
         <Bell className={`w-6 h-6 ${unreadCount > 0 && isOpen === false ? 'animate-[bell_2s_infinite]' : ''}`} />
@@ -69,17 +69,17 @@ const NotificationBell: React.FC = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 15, scale: 0.95 }}
               transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              className="fixed inset-x-4 top-20 md:absolute md:inset-auto md:right-0 md:top-full md:mt-4 w-auto md:w-[420px] bg-white/90 backdrop-blur-xl rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/40 z-[50] overflow-hidden flex flex-col max-h-[80vh] md:max-h-[600px]"
+              className="fixed inset-x-4 top-20 z-[50] flex max-h-[80vh] w-auto flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 md:inset-x-auto md:right-5 md:top-5 md:w-[420px] md:max-w-[calc(100vw-2rem)]"
             >
               {/* Header */}
-              <div className="p-6 border-b border-slate-100/50 flex items-center justify-between bg-white/40">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-primary/10 text-primary rounded-xl">
+                  <div className="rounded-md bg-primary/10 p-2.5 text-primary">
                     <Inbox className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-black text-slate-900 text-lg">Notifications</h4>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    <h4 className="text-lg font-bold text-slate-900 dark:text-slate-50">Notifications</h4>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                       {unreadCount} Unread
                     </p>
                   </div>
@@ -87,7 +87,7 @@ const NotificationBell: React.FC = () => {
                 {unreadCount > 0 && (
                   <button 
                     onClick={() => markAllMutation.mutate()}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-primary/5 text-primary hover:bg-primary text-xs font-bold rounded-full transition-all group hover:text-white"
+                    className="flex items-center gap-1.5 rounded-md bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-all hover:bg-primary hover:text-white"
                   >
                     <CheckCheck className="w-4 h-4" />
                     Mark all
@@ -99,11 +99,11 @@ const NotificationBell: React.FC = () => {
               <div className="flex-1 overflow-y-auto scrollbar-hide py-2">
                 {notifications.length === 0 ? (
                   <div className="py-20 px-8 text-center flex flex-col items-center">
-                    <div className="w-20 h-20 bg-slate-50 text-slate-200 rounded-[2rem] flex items-center justify-center mb-6">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-lg bg-slate-50 text-slate-300 dark:bg-slate-800 dark:text-slate-500">
                       <Bell className="w-10 h-10" />
                     </div>
-                    <h5 className="text-slate-900 font-black text-xl mb-2">No alerts yet</h5>
-                    <p className="text-slate-400 font-medium max-w-[240px] leading-relaxed mx-auto">
+                    <h5 className="mb-2 text-xl font-bold text-slate-900 dark:text-slate-50">No alerts yet</h5>
+                    <p className="mx-auto max-w-[240px] font-medium leading-relaxed text-slate-500 dark:text-slate-400">
                       We'll notify you when something important happens in your workspace.
                     </p>
                   </div>
@@ -115,24 +115,24 @@ const NotificationBell: React.FC = () => {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.03 }}
-                        className={`p-4 rounded-3xl transition-all duration-200 group cursor-pointer relative flex gap-4 ${
-                          !notification.isRead 
-                            ? 'bg-primary/5 hover:bg-primary/[0.08]' 
-                            : 'hover:bg-slate-50'
+                        className={`relative flex cursor-pointer gap-4 rounded-lg p-4 transition-all duration-200 ${
+                          !notification.isRead
+                            ? 'bg-primary/5 hover:bg-primary/[0.08]'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800'
                         }`}
                         onClick={() => {
                           if (!notification.isRead) markReadMutation.mutate(notification.id);
                         }}
                       >
-                        <div className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${
-                          !notification.isRead ? 'bg-primary text-white shadow-primary/20' : 'bg-slate-100 text-slate-500'
+                        <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md shadow-sm ${
+                          !notification.isRead ? 'bg-primary text-white shadow-primary/20' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'
                         }`}>
                           <User className="w-6 h-6" />
                         </div>
                         <div className="flex-1 min-w-0 pr-4">
                           <div className="flex justify-between items-start mb-1">
                             <p className={`text-sm leading-tight line-clamp-1 truncate ${
-                              !notification.isRead ? 'font-black text-slate-900' : 'font-bold text-slate-600'
+                              !notification.isRead ? 'font-bold text-slate-900 dark:text-slate-50' : 'font-semibold text-slate-700 dark:text-slate-300'
                             }`}>
                               {notification.title}
                             </p>
@@ -140,7 +140,7 @@ const NotificationBell: React.FC = () => {
                               <span className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0 mt-1" />
                             )}
                           </div>
-                          <p className="text-sm text-slate-500 line-clamp-2 leading-snug font-medium mb-3">
+                          <p className="mb-3 line-clamp-2 text-sm font-medium leading-snug text-slate-600 dark:text-slate-400">
                             {notification.message}
                           </p>
                           <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">
@@ -156,7 +156,7 @@ const NotificationBell: React.FC = () => {
 
               {/* View All Footer (Optional Placeholder) */}
               {notifications.length > 0 && (
-                <div className="p-4 bg-slate-50/50 border-t border-slate-100 text-center">
+                <div className="border-t border-slate-100 bg-slate-50 p-4 text-center dark:border-slate-800 dark:bg-slate-950">
                   <button className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-primary transition-colors">
                     End of notifications
                   </button>

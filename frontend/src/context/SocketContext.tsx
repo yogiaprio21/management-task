@@ -27,6 +27,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       auth: {
         token: localStorage.getItem('token'),
       },
+      query: {
+        userId: user.id,
+      },
       autoConnect: false,
     });
   }, [isAuthenticated, user]);

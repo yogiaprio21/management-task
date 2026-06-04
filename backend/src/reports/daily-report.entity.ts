@@ -7,14 +7,11 @@ export class DailyReport {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column("text")
-  completedYesterday: string;
+  @Column('text')
+  content: string;
 
-  @Column("text")
-  planForToday: string;
-
-  @Column("text", { nullable: true })
-  blockers: string;
+  @Column({ default: 'daily' })
+  type: string;
 
   @Column()
   userId: string;

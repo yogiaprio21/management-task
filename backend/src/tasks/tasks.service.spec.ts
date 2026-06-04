@@ -8,6 +8,8 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { AuditService } from '../audit/audit.service';
 import { User } from '../users/user.entity';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { WebhooksService } from '../integrations/webhooks/webhooks.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 
 const mockRepository = () => ({
   create: jest.fn(),
@@ -25,6 +27,7 @@ const mockRepository = () => ({
   manager: {
     getRepository: jest.fn(() => ({
       find: jest.fn().mockReturnValue([]),
+      findOne: jest.fn().mockReturnValue(null),
     })),
   },
 });
@@ -35,6 +38,14 @@ const mockNotificationsGateway = () => ({
 
 const mockAuditService = () => ({
   log: jest.fn(),
+});
+
+const mockWebhooksService = () => ({
+  dispatch: jest.fn(),
+});
+
+const mockWorkspacesService = () => ({
+  assertUserInWorkspace: jest.fn(),
 });
 
 describe('TasksService', () => {
@@ -58,6 +69,8 @@ describe('TasksService', () => {
         { provide: getRepositoryToken(Attachment), useFactory: mockRepository },
         { provide: NotificationsGateway, useFactory: mockNotificationsGateway },
         { provide: AuditService, useFactory: mockAuditService },
+        { provide: WebhooksService, useFactory: mockWebhooksService },
+        { provide: WorkspacesService, useFactory: mockWorkspacesService },
       ],
     }).compile();
 
@@ -95,7 +108,8 @@ describe('TasksService', () => {
       } as any;
       taskRepo.findOne.mockResolvedValue(task);
       const result = await service.findOne('task-id', adminUser);
-      expect(result).toEqual(task);
+      expect(result.sprint.project.members).toBeUndefined();
+      expect(result.id).toBe(task.id);
     });
   });
 
@@ -142,7 +156,11 @@ describe('TasksService', () => {
 
       const result = await service.addComment('task-id', 'hello', projectOwner);
       
-      expect(commentRepo.create).toHaveBeenCalledWith({ content: 'hello', task, user: projectOwner });
+      expect(commentRepo.create).toHaveBeenCalledWith({
+        content: 'hello',
+        task: expect.objectContaining({ id: task.id }),
+        user: projectOwner,
+      });
       expect(commentRepo.save).toHaveBeenCalled();
       expect(auditService.log).toHaveBeenCalledWith('add_comment', 'Task', 'task-id', projectOwner, { commentId: 'comment-id' });
       expect(result).toEqual(comment);

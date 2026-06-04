@@ -105,7 +105,7 @@ const Dashboard: React.FC = () => {
         <motion.div
            initial={{ opacity: 0, scale: 0.95 }}
            animate={{ opacity: 1, scale: 1 }}
-           className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 dark:from-slate-800 dark:via-slate-800/80 dark:to-slate-900 border border-primary/20 dark:border-slate-700 p-8 md:p-16 text-center shadow-xl shadow-primary/5 mt-8"
+           className="relative mt-8 overflow-hidden rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 p-8 text-center shadow-xl shadow-primary/5 dark:border-slate-700 dark:from-slate-800 dark:via-slate-800/80 dark:to-slate-900 md:p-16"
         >
           <div className="absolute top-0 right-0 p-12 opacity-10 blur-3xl pointer-events-none">
             <div className="w-64 h-64 bg-primary rounded-full mix-blend-multiply"></div>
@@ -114,7 +114,7 @@ const Dashboard: React.FC = () => {
             <div className="w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply"></div>
           </div>
           <div className="relative z-10 max-w-2xl mx-auto space-y-6">
-            <div className="w-24 h-24 bg-white dark:bg-slate-800 shadow-xl shadow-primary/20 rounded-3xl flex items-center justify-center mx-auto mb-8 transform -rotate-3 hover:rotate-0 transition-transform duration-500">
+            <div className="mx-auto mb-8 flex h-24 w-24 -rotate-3 transform items-center justify-center rounded-lg bg-white shadow-xl shadow-primary/20 transition-transform duration-500 hover:rotate-0 dark:bg-slate-800">
                <Layout className="w-12 h-12 text-primary" />
             </div>
             <h2 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight">
@@ -147,7 +147,7 @@ const Dashboard: React.FC = () => {
                 transition={{ delay: i * 0.1 }}
               >
                 <Card className="p-6 flex items-center gap-4 card-gradient">
-                  <div className={`p-4 rounded-2xl ${stat.bg} ${stat.color}`}>
+                  <div className={`rounded-lg p-4 ${stat.bg} ${stat.color}`}>
                     <stat.icon className="w-6 h-6" />
                   </div>
                   <div>
@@ -178,7 +178,7 @@ const Dashboard: React.FC = () => {
                     <Card className="h-full p-8 flex flex-col justify-between group cursor-pointer card-gradient">
                       <div className="space-y-4">
                         <div className="flex justify-between items-start">
-                          <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-slate-100 text-slate-400 transition-all duration-300 group-hover:bg-primary/10 group-hover:text-primary">
                             <Layout className="w-7 h-7" />
                           </div>
                           {project.deadline && (

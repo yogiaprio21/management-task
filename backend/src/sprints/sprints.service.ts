@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sprint } from './sprint.entity';
 import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
+import { WebhooksService } from '../integrations/webhooks/webhooks.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 
 @Injectable()
 export class SprintsService {
@@ -11,9 +13,24 @@ export class SprintsService {
     @InjectRepository(Sprint)
     private sprintsRepository: Repository<Sprint>,
     private auditService: AuditService,
+    private webhooksService: WebhooksService,
+    private workspacesService: WorkspacesService,
   ) {}
 
   async create(sprintData: Partial<Sprint>, user: User): Promise<Sprint> {
+    if (!sprintData.projectId) {
+      throw new BadRequestException('Sprint must be attached to a project');
+    }
+    const project = await this.sprintsRepository.manager.getRepository('Project').findOne({
+      where: { id: sprintData.projectId },
+      relations: ['workspace', 'workspace.members'],
+    }) as any;
+    if (!project) throw new NotFoundException('Project not found');
+    if (project.workspaceId) {
+      await this.workspacesService.assertCanManage(project.workspaceId, user);
+    } else if (user.role !== 'admin' && project.ownerId !== user.id) {
+      throw new ForbiddenException('Only project owners can create sprints');
+    }
     const sprint = this.sprintsRepository.create(sprintData);
     const savedSprint = await this.sprintsRepository.save(sprint);
     await this.auditService.log('create', 'Sprint', savedSprint.id, user, sprintData);
@@ -64,7 +81,17 @@ export class SprintsService {
 
     await this.sprintsRepository.update(id, sprintData);
     await this.auditService.log('update', 'Sprint', id, user, sprintData);
-    return this.findOne(id, user);
+    const updatedSprint = await this.findOne(id, user);
+
+    if (sprintData.status === 'completed' && sprint.status !== 'completed') {
+      await this.webhooksService.dispatch(updatedSprint.projectId, 'sprint.completed', {
+        title: 'Sprint completed',
+        message: `${user.name} completed "${updatedSprint.name}".`,
+        sprintId: updatedSprint.id,
+      });
+    }
+
+    return updatedSprint;
   }
 
   async remove(id: string, user: User): Promise<void> {

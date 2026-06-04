@@ -38,23 +38,7 @@ export async function runSeed(app: INestApplicationContext) {
     return;
   }
 
-  // --- AUTOMATIC SCHEMA SYNC ---
-  console.log('🔄 Synchronizing database schema (Auto-creating tables)...');
-  try {
-    await dataSource.synchronize();
-    console.log('✅ Database schema synchronized.');
-  } catch (error) {
-    console.log('⚠️  Could not synchronize schema, proceeding anyway...', error);
-  }
-
-  // --- AUTOMATIC SCHEMA SYNC ---
-  console.log('🔄 Synchronizing database schema (Auto-creating tables)...');
-  try {
-    await dataSource.synchronize();
-    console.log('✅ Database schema synchronized.');
-  } catch (error) {
-    console.log('⚠️  Could not synchronize schema, proceeding anyway...', error);
-  }
+  console.log('✅ Database schema is managed by migrations.');
 
   const password = await bcrypt.hash('password123', 10);
 

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProjectDto {
@@ -15,6 +15,11 @@ export class CreateProjectDto {
   @ApiPropertyOptional({ example: '2026-12-31', description: 'Project deadline' })
   @IsOptional()
   deadline?: Date;
+
+  @ApiPropertyOptional({ example: '7d61f9d8-d7b8-4f31-bc8f-30867bf524dd', description: 'Workspace that owns this project' })
+  @IsOptional()
+  @IsUUID()
+  workspaceId?: string;
 }
 
 export class UpdateProjectDto {
@@ -31,4 +36,9 @@ export class UpdateProjectDto {
   @ApiPropertyOptional({ example: '2026-12-31' })
   @IsOptional()
   deadline?: Date;
+
+  @ApiPropertyOptional({ example: '7d61f9d8-d7b8-4f31-bc8f-30867bf524dd' })
+  @IsOptional()
+  @IsUUID()
+  workspaceId?: string;
 }

@@ -1,53 +1,57 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import Dashboard from '../pages/Dashboard';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
+import Dashboard from '../pages/Dashboard';
 
-// Mock dependencies
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'user-1', name: 'Test User', role: 'manager' },
+    isAuthenticated: true,
+  }),
+}));
+
 vi.mock('../api/projects', () => ({
   getProjects: vi.fn().mockResolvedValue([]),
   createProject: vi.fn().mockResolvedValue({ id: '1', name: 'Test Project' }),
 }));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
+vi.mock('../api/tasks', () => ({
+  getTasks: vi.fn().mockResolvedValue([]),
+}));
 
-const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      {children}
-    </BrowserRouter>
-  </QueryClientProvider>
-);
+vi.mock('../api/sprints', () => ({
+  getSprints: vi.fn().mockResolvedValue([]),
+}));
+
+const renderDashboard = () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    </QueryClientProvider>,
+  );
+};
 
 describe('Dashboard Component', () => {
   it('renders correctly', async () => {
-    render(<Dashboard />, { wrapper: Wrapper });
-    expect(await screen.findByText('Dashboard Overview')).toBeDefined();
+    renderDashboard();
+    expect(await screen.findByText('Project Dashboard')).toBeDefined();
   });
 
   it('opens create project modal when button is clicked', async () => {
-    render(<Dashboard />, { wrapper: Wrapper });
-    
-    const createButton = await screen.findByText('New Project');
-    fireEvent.click(createButton);
-    
-    expect(screen.getByText('Create New Project')).toBeDefined();
-    expect(screen.getByPlaceholderText('e.g., Website Redesign')).toBeDefined();
+    renderDashboard();
+    fireEvent.click(await screen.findByText('New Project'));
+    expect(screen.getByText('Define your project workspace')).toBeDefined();
+    expect(screen.getByPlaceholderText('e.g. Next-Gen App')).toBeDefined();
   });
 
-  it('closes modal when cancel is clicked', () => {
-    render(<Dashboard />, { wrapper: Wrapper });
-    
-    fireEvent.click(screen.getByText('New Project'));
+  it('closes modal when cancel is clicked', async () => {
+    renderDashboard();
+    fireEvent.click(await screen.findByText('New Project'));
     fireEvent.click(screen.getByText('Cancel'));
-    
-    expect(screen.queryByText('Create New Project')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('Define your project workspace')).toBeNull());
   });
 });

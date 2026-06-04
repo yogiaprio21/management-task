@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task } from './task.entity';
@@ -8,6 +8,8 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuditLog } from '../audit/audit-log.entity';
+import { WebhooksService } from '../integrations/webhooks/webhooks.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 
 @Injectable()
 export class TasksService {
@@ -20,9 +22,50 @@ export class TasksService {
     private attachmentsRepository: Repository<Attachment>,
     private notificationsGateway: NotificationsGateway,
     private auditService: AuditService,
+    private webhooksService: WebhooksService,
+    private workspacesService: WorkspacesService,
   ) {}
 
+  private async resolveProjectContext(task: Partial<Task>, user?: User): Promise<{ projectId?: string; workspaceId?: string; ownerId?: string }> {
+    if (task.sprintId) {
+      const sprint = await this.tasksRepository.manager.getRepository('Sprint').findOne({
+        where: { id: task.sprintId },
+        relations: ['project', 'project.workspace', 'project.workspace.members', 'project.members'],
+      }) as any;
+      if (!sprint) throw new NotFoundException('Sprint not found');
+      if (user) this.assertProjectAccess(sprint.project, user);
+      return { projectId: sprint.projectId, workspaceId: sprint.project?.workspaceId, ownerId: sprint.project?.ownerId };
+    }
+
+    if (task.backlogItemId) {
+      const backlogItem = await this.tasksRepository.manager.getRepository('BacklogItem').findOne({
+        where: { id: task.backlogItemId },
+        relations: ['project', 'project.workspace', 'project.workspace.members', 'project.members'],
+      }) as any;
+      if (!backlogItem) throw new NotFoundException('Backlog item not found');
+      if (user) this.assertProjectAccess(backlogItem.project, user);
+      return { projectId: backlogItem.projectId, workspaceId: backlogItem.project?.workspaceId, ownerId: backlogItem.project?.ownerId };
+    }
+
+    return {};
+  }
+
+  private assertProjectAccess(project: any, user: User): void {
+    const isProjectMember = project?.members?.some((member) => member.id === user.id);
+    const isWorkspaceMember = project?.workspace?.members?.some((member) => member.userId === user.id);
+    const isOwner = project?.ownerId === user.id;
+    if (!isOwner && !isProjectMember && !isWorkspaceMember && user.role !== 'admin') {
+      throw new ForbiddenException('You do not have access to this project');
+    }
+  }
+
   async create(taskData: Partial<Task>, user: User): Promise<Task> {
+    if (!taskData.sprintId && !taskData.backlogItemId) {
+      throw new BadRequestException('Task must be attached to a sprint or backlog item');
+    }
+    const context = await this.resolveProjectContext(taskData, user);
+    await this.workspacesService.assertUserInWorkspace(context.workspaceId, taskData.assigneeId);
+
     const task = this.tasksRepository.create({
       ...taskData,
       creatorId: user.id,
@@ -31,7 +74,7 @@ export class TasksService {
     
     // Notify assignee
     if (savedTask.assigneeId && savedTask.assigneeId !== user.id) {
-      this.notificationsGateway.sendNotificationToUser(
+      await this.notificationsGateway.sendNotificationToUser(
         savedTask.assigneeId, 
         'New Task Assigned',
         `You have been assigned to task: ${savedTask.title}`
@@ -39,6 +82,15 @@ export class TasksService {
     }
     
     await this.auditService.log('create', 'Task', savedTask.id, user, taskData);
+
+    if (context.projectId) {
+      await this.webhooksService.dispatch(context.projectId, 'task.created', {
+        title: 'Task created',
+        message: `${user.name} created "${savedTask.title}".`,
+        taskId: savedTask.id,
+      });
+    }
+
     return savedTask;
   }
 
@@ -47,12 +99,25 @@ export class TasksService {
       .leftJoinAndSelect('task.assignee', 'assignee')
       .leftJoinAndSelect('task.creator', 'creator')
       .leftJoinAndSelect('task.sprint', 'sprint')
-      .leftJoinAndSelect('sprint.project', 'project');
+      .leftJoinAndSelect('sprint.project', 'project')
+      .leftJoinAndSelect('project.workspace', 'workspace')
+      .leftJoinAndSelect('task.backlogItem', 'backlogItem')
+      .leftJoinAndSelect('backlogItem.project', 'backlogProject')
+      .leftJoinAndSelect('backlogProject.workspace', 'backlogWorkspace');
 
     if (user.role !== 'admin') {
       // Use leftJoin (not select) for checking membership to avoid circular JSON
       query.leftJoin('project.members', 'member')
-           .where('(project.ownerId = :userId OR member.id = :userId)', { userId: user.id });
+        .leftJoin('workspace.members', 'workspaceMember')
+        .leftJoin('backlogProject.members', 'backlogProjectMember')
+        .leftJoin('backlogWorkspace.members', 'backlogWorkspaceMember')
+        .where(
+          `(
+            project.ownerId = :userId OR member.id = :userId OR workspaceMember.userId = :userId
+            OR backlogProject.ownerId = :userId OR backlogProjectMember.id = :userId OR backlogWorkspaceMember.userId = :userId
+          )`,
+          { userId: user.id },
+        );
     }
 
     if (sprintId) {
@@ -138,6 +203,8 @@ export class TasksService {
 
   async update(id: string, taskData: Partial<Task>, user: User): Promise<Task> {
     const task = await this.findOne(id, user);
+    const existingContext = await this.resolveProjectContext(task);
+    await this.workspacesService.assertUserInWorkspace(existingContext.workspaceId, taskData.assigneeId);
 
     // RBAC Logic
     const isAdmin = user.role === 'admin';
@@ -167,7 +234,7 @@ export class TasksService {
     
     // Notify if assignee changed or status updated
     if (taskData.assigneeId && taskData.assigneeId !== task.assigneeId) {
-       this.notificationsGateway.sendNotificationToUser(
+       await this.notificationsGateway.sendNotificationToUser(
           taskData.assigneeId,
           'Task Reassigned',
           `You have been assigned to task: ${updatedTask.title}`
@@ -175,6 +242,17 @@ export class TasksService {
     }
 
     await this.auditService.log('update', 'Task', id, user, taskData);
+
+    const context = await this.resolveProjectContext(updatedTask);
+    if (context.projectId && taskData.status && taskData.status !== task.status) {
+      await this.webhooksService.dispatch(context.projectId, 'task.status_changed', {
+        title: 'Task status changed',
+        message: `${user.name} moved "${updatedTask.title}" to ${taskData.status}.`,
+        taskId: updatedTask.id,
+        status: taskData.status,
+      });
+    }
+
     return updatedTask;
   }
 

@@ -1,14 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasks, createTask, updateTask, deleteTask } from '../api/tasks';
+import { getSprints } from '../api/sprints';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Search, Filter, Trash2, Edit2, Calendar } from 'lucide-react';
+import { Plus, Search, Filter, Trash2, Edit2, Calendar, CheckSquare } from 'lucide-react';
 import TaskModal from '../components/TaskModal';
 import { toast } from 'react-hot-toast';
 import type { Task, CreateTaskDto, UpdateTaskDto } from '../types';
 import { AxiosError } from 'axios';
 import clsx from 'clsx';
 import { Skeleton } from '../components/Skeleton';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { Button } from '../ui/Button';
+import { PageHeader } from '../ui/PageHeader';
+import ProjectSwitcher from '../components/ProjectSwitcher';
 
 const TaskList: React.FC = () => {
   const { user } = useAuth();
@@ -19,11 +24,21 @@ const TaskList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<'me' | 'all'>('me');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => getTasks(''), // Fetch all tasks
   });
+
+  const { data: sprints = [] } = useQuery({
+    queryKey: ['sprints', selectedProjectId],
+    queryFn: () => getSprints(selectedProjectId),
+    enabled: !!selectedProjectId,
+  });
+
+  const activeSprint = sprints.find((sprint) => sprint.status === 'active');
 
   const createMutation = useMutation({
     mutationFn: createTask,
@@ -69,7 +84,11 @@ const TaskList: React.FC = () => {
   }, [tasks, search, statusFilter, priorityFilter, assigneeFilter, user?.id]);
 
   const handleCreate = (data: CreateTaskDto | UpdateTaskDto) => {
-    createMutation.mutate(data as CreateTaskDto);
+    if (!activeSprint) {
+      toast.error('Create or activate a sprint before creating a task');
+      return;
+    }
+    createMutation.mutate({ ...(data as CreateTaskDto), sprintId: activeSprint.id });
   };
 
   const handleUpdate = (data: CreateTaskDto | UpdateTaskDto) => {
@@ -79,12 +98,14 @@ const TaskList: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      deleteMutation.mutate(id);
-    }
+    setDeleteId(id);
   };
 
   const openCreateModal = () => {
+    if (!activeSprint) {
+      toast.error('Select a project with an active sprint first');
+      return;
+    }
     setEditingTask(undefined);
     setIsModalOpen(true);
   };
@@ -119,20 +140,20 @@ const TaskList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">All Tasks</h1>
-        {(user?.role === 'admin' || user?.role === 'manager') && (
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
+      <PageHeader
+        title="Tasks"
+        description="Search, filter, update, and review work across projects."
+        icon={<CheckSquare className="h-5 w-5" />}
+        actions={(user?.role === 'admin' || user?.role === 'manager') && (
+          <Button onClick={openCreateModal}>
+            <Plus className="h-4 w-4" />
             New Task
-          </button>
+          </Button>
         )}
-      </div>
+      />
 
-      <div className="flex flex-col md:flex-row gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="surface-panel flex flex-col gap-4 p-4 md:flex-row">
+        <ProjectSwitcher value={selectedProjectId} onChange={setSelectedProjectId} label="Project scope" />
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
@@ -143,7 +164,7 @@ const TaskList: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
         </div>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-3">
           <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg flex items-center">
             <button 
               onClick={() => setAssigneeFilter('me')}
@@ -271,7 +292,7 @@ const TaskList: React.FC = () => {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        {canDelete() && (
+                      {canDelete() && (
                           <button
                             onClick={() => handleDelete(task.id)}
                             className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
@@ -296,6 +317,16 @@ const TaskList: React.FC = () => {
         onSubmit={editingTask ? handleUpdate : handleCreate}
         task={editingTask}
         isCreating={!editingTask}
+      />
+
+      <ConfirmDialog
+        isOpen={!!deleteId}
+        title="Delete task?"
+        description="This task will be removed from the workspace. Comments, files, and history attached to it may no longer be available."
+        confirmLabel="Delete"
+        isLoading={deleteMutation.isPending}
+        onClose={() => setDeleteId(null)}
+        onConfirm={() => deleteId && deleteMutation.mutate(deleteId, { onSuccess: () => setDeleteId(null) })}
       />
     </div>
   );

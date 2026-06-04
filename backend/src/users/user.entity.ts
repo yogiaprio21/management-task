@@ -3,6 +3,7 @@ import { Task } from '../tasks/task.entity';
 import { Project } from '../projects/project.entity';
 import { Notification } from '../notifications/notification.entity';
 import { DailyReport } from '../reports/daily-report.entity';
+import { WorkspaceMember } from '../workspaces/workspace-member.entity';
 
 import { BacklogItem } from '../backlog/backlog-item.entity';
 
@@ -46,4 +47,7 @@ export class User {
 
   @OneToMany(() => DailyReport, (report) => report.user)
   dailyReports: DailyReport[];
+
+  @OneToMany(() => WorkspaceMember, (membership) => membership.user)
+  workspaceMemberships: WorkspaceMember[];
 }
